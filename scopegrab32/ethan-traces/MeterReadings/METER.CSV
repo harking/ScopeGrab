@@ -1,0 +1,22 @@
+"Title        ","Meter Reading",,"Title        ","Meter Reading",,"Title        ","Meter Reading"
+"ID           ",1,,"ID           ",2,,"ID           ",3
+"Type         ","Meter",,"Type         ","Meter",,"Type         ","Meter"
+"Date         ",11/21/2004,,"Date         ",11/21/2004,,"Date         ",11/21/2004
+"Time         ",12:17:01 PM,,"Time         ",12:17:01 PM,,"Time         ",12:17:01 PM
+"X Scale      ",2.500000E+01,,"X Scale      ",2.500000E+01,,"X Scale      ",2.500000E+01
+"X At 0%      ",0.000000E+00,,"X At 0%      ",0.000000E+00,,"X At 0%      ",0.000000E+00
+"X Resolution ",2.500000E+01,,"X Resolution ",2.500000E+01,,"X Resolution ",2.500000E+01
+"X Size       ",1,,"X Size       ",1,,"X Size       ",1
+"X Unit       ","s",,"X Unit       ","s",,"X Unit       ","s"
+"X Label      ","25 s/Div",,"X Label      ","25 s/Div",,"X Label      ","25 s/Div"
+"Y Scale      ",1.310720E+03,,"Y Scale      ",1.310720E+03,,"Y Scale      ",1.310720E+03
+"Y At 50%     ",0.000000E+00,,"Y At 50%     ",0.000000E+00,,"Y At 50%     ",0.000000E+00
+"Y Resolution ",1.638400E+03,,"Y Resolution ",1.638400E+03,,"Y Resolution ",1.638400E+03
+"Y Size       ",16384,,"Y Size       ",16384,,"Y Size       ",16384
+"Y Unit       ","V",,"Y Unit       ","D%+",,"Y Unit       ","Hz"
+"Y Label      ","DC",,"Y Label      ","Duty%+",,"Y Label      ","Frequency"
+"Description  ","",,"Description  ","",,"Description  ",""
+"Description  ","",,"Description  ","",,"Description  ",""
+"Description  ","",,"Description  ","",,"Description  ",""
+
+0.000000E+00,0.000000E+00,,0.000000E+00,1.000000E+308,,0.000000E+00,0.000000E+00

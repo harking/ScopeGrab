@@ -1,0 +1,11 @@
+QW 101.		Channel A
+QW 102.		Channel B
+QW 103.		Channel a+b/a-b....
+QW 104.		Temp1
+QW 105.		Temp2
+QW 106.		Temp3
+QW 107.		Memory4
+QW 108.		Memory5
+QW 109.		Memory6
+Qw 110.		Memory7
+QW 111.		Memory8

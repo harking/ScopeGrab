@@ -1,0 +1,2 @@
+3	0.00002542	ntvdm.exe	IRP_MJ_WRITE	Serial1	SUCCESS	Length 3: AS.	
+14	0.00000419	ntvdm.exe	IRP_MJ_READ	Serial1	SUCCESS	Length 2: 0.	
