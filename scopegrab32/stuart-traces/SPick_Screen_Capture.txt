@@ -1,0 +1,26 @@
+
+Hi Jan,
+
+It's me again. The format of the file is Epson Escape Sequence. You can use 
+PrintCapture to import the file and it will reconstruct the image that 
+FlukeView v1.1 creates. I should have known this...
+
+I have attached the binary capture of the "QG129" command (by issuing it in 
+a terminal and capturing the output).
+
+In other words:
+PC 19200,N,8,1,XONXOFF^$0D
+<0^$0D>          (ACK)
+QG129^$0D
+<0^$0D>          (ACK)
+<7453,>
+<7453 bytes of ESC codes to follow........)
+
+You need to strip off the first 7 bytes, this is the ACK from the scope. 
+(ACK + 7453 bytes expected).
+
+Hope this helps.
+
+Regards,
+
+Stuart
