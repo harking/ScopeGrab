@@ -55,10 +55,12 @@
 #define WINDOW_WIDTH            655
 #define WINDOW_HEIGHT           665
 
-#define FLUKESCREEN_WIDTH       480 // 320
-#define FLUKESCREEN_HEIGHT      480 // 240
-#define EPSONSCREEN_WIDTH       260 // 320
-#define EPSONSCREEN_HEIGHT      260 // 240
+#define FLUKESCREEN_WIDTH       480
+#define FLUKESCREEN_HEIGHT      480
+
+#define EPSONSCREEN_SCALEFACTOR 2
+#define EPSONSCREEN_WIDTH       240*EPSONSCREEN_SCALEFACTOR
+#define EPSONSCREEN_HEIGHT      240*EPSONSCREEN_SCALEFACTOR
 #define IMAGE_BITDEPTH          1
 
 // ---- main prog defs and vars ----
@@ -173,6 +175,7 @@ private:
 
     wxStaticBitmap *sbmpScreenshot;    // image painted to the display
     wxImage        *imgScreenshot;     // actual image content
+    BOOL           bGotScreenshot;     // TRUE when image contains a screenshot
     wxString       strPostscript;      // postscript version of the image
     wxString       strPrevSavePath;    // previous path used when saving file
     int            mScopemeterType;    // detected scopemeter, default: SCOPEMETER_NONE
