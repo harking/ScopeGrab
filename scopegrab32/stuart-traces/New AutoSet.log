@@ -1,0 +1,5 @@
+[\\DESKTOPPC]
+3  0.00000000  ntvdm.exe  IRP_MJ_WRITE  Serial0  Length 3: 41 53 0D 
+3  0.00003013  SUCCESS  
+18  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 2
+18  0.00000342  SUCCESS  Length 2: 30 0D 

@@ -1,0 +1,115 @@
+From stuartpick@hotmail.com Sun Nov 21 19:44:34 2004
+Date: Sun, 21 Nov 2004 17:43:09 +0000
+From: Stuart Pickles <stuartpick@hotmail.com>
+To: jwagner@cc.hut.fi
+Subject: Re: Flukeview V3 Demo?
+
+Hi Jan,
+
+It's me again. The format of the file is Epson Escape Sequence. You can use 
+PrintCapture to import the file and it will reconstruct the image that 
+FlukeView v1.1 creates. I should have known this...
+
+I have attached the binary capture of the "QG129" command (by issuing it in 
+a terminal and capturing the output).
+
+In other words:
+PC 19200,N,8,1,XONXOFF^$0D
+<0^$0D>          (ACK)
+QG129^$0D
+<0^$0D>          (ACK)
+<7453,>
+<7453 bytes of ESC codes to follow........)
+
+You need to strip off the first 7 bytes, this is the ACK from the scope. 
+(ACK + 7453 bytes expected).
+
+Hope this helps.
+
+Regards,
+
+Stuart
+
+
+
+
+
+
+>From: Jan Wagner <jwagner@cc.hut.fi>
+>To: Stuart Pickles <stuartpick@hotmail.com>
+>Subject: Re: Flukeview V3 Demo?
+>Date: Sun, 21 Nov 2004 17:02:32 +0200 (EET)
+>
+>Hi again,
+>
+>On Sat, 20 Nov 2004, Stuart Pickles wrote:
+>>I have already seen Flukeview v1.1 on eMule...not bad going since I only 
+>>gave it out a short while ago :)
+>
+>LOL :)
+>well, i found it was quite logical to place it there... ;-)
+>
+>>I bought my Scopemeter 99 off eBay a month ago for home use, complete with 
+>>PM9080 cable and Flukeview v1.1, now all of a sudden they are selling for 
+>>ridiculous amounts on there. A work collegue also wants one now, but won't 
+>>pay the high prices, they are almost reaching the price of a new Tektronix 
+>>TDS1012, which would be a better option.
+>
+>Ouch... looks like it's ~$1000 for the TDS on ebay. A 90 series scopemeter 
+>at that price would be really ridiculously expensive...
+>
+>>Included in the .ZIP file is hopefully what you want. The output from
+>>portmon is quite sparse, as it doesn't seem to show the bytes sent back
+>>from the scope.
+>
+>Many thanks for the traces!!
+>They did contain some useful infos.
+>I've kept track of the commands extracted from the traces at
+>   http://scopegrab32.sourceforge.net/commands_reverse_eng.txt
+>
+>>If this output is not okay, I can try sniffing the comms, but need my 
+>>other serial port cable which is at work.
+>
+>Basically it looks ok, though FlukeView v1.1 seems to be inefficiently 
+>programmed.
+>
+>Well actually, I could make use of your offer for more traces... ;-) If you 
+>could make them of maybe one screenshot and one waveform download?
+>This time with portmon settings modified a bit?
+>I.e. in portmon:
+>    Edit => Filter/Highlight
+>      Exclude:    *IOCTL_*;*SUCCESS*
+>    Edit => Max Output Bytes
+>      MaxBytes:   4096
+>    Options => Show Hex
+>      (checked)
+>That should display only the port Read/Write commands. The 4096 bytes 
+>(==max) buffer setting might not be enough, as FlukeView just sends the 
+>screenshot request and then waits a few seconds and reads in the full chunk 
+>of >7400 bytes, instead of reading the individual bytes while they are 
+>coming in...
+>Anyway, if portmon manages to display those 4096 (or even just 256) as hex, 
+>then this should be already enough for me to figure out the image data 
+>format.
+>Sniffing with a cable might be a bit more reliable, but maybe it is too 
+>much effort, if portmon does pretty much the same anyway (?)
+>
+>Big thanks for your help!!
+>
+>cheers,
+>  - Jan
+>
+>--
+>****************************************************
+>  Helsinki University of Technology
+>  Dept. of Electrical and Communications Engineering
+>  http://www.hut.fi/~jwagner/ - jwagner@cc.hut.fi
+
+_________________________________________________________________
+Save your chats with a single keystroke - get MSN Toolbar! 
+http://messenger.msn.co.za?DI=1054&XAPID=2532
+
+    [ Part 2, Application/OCTET-STREAM (Name: "Screen Capture.bin") ]
+    [ 10KB. ]
+    [ Unable to print this part. ]
+

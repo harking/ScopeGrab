@@ -1,0 +1,119 @@
+[\\DESKTOPPC]
+0  0.00000000  ntvdm.exe  IRP_MJ_CREATE  Serial0  Options: Open 
+0  0.00005175  SUCCESS  
+40  0.00000000  ntvdm.exe  IRP_MJ_WRITE  Serial0  Length 1: 0D 
+40  0.00002074  SUCCESS  
+61  0.00000000  ntvdm.exe  IRP_MJ_WRITE  Serial0  Length 1: 0D 
+61  0.00002084  SUCCESS  
+76  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 2
+76  0.00000385  SUCCESS  Length 2: 30 0D 
+84  0.00000000  ntvdm.exe  IRP_MJ_WRITE  Serial0  Length 3: 49 44 0D 
+84  0.00002294  SUCCESS  
+95  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 2
+95  0.00000396  SUCCESS  Length 2: 30 0D 
+113  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+113  0.00000337  SUCCESS  Length 1: 53 
+118  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+118  0.00000269  SUCCESS  Length 1: 63 
+123  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+123  0.00000248  SUCCESS  Length 1: 6F 
+128  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+128  0.00000249  SUCCESS  Length 1: 70 
+133  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+133  0.00000246  SUCCESS  Length 1: 65 
+138  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+138  0.00000247  SUCCESS  Length 1: 4D 
+143  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+143  0.00000248  SUCCESS  Length 1: 65 
+148  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+148  0.00000251  SUCCESS  Length 1: 74 
+153  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+153  0.00000249  SUCCESS  Length 1: 65 
+158  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+158  0.00000249  SUCCESS  Length 1: 72 
+163  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+163  0.00000247  SUCCESS  Length 1: 20 
+168  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+168  0.00000247  SUCCESS  Length 1: 39 
+173  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+173  0.00000247  SUCCESS  Length 1: 39 
+178  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+178  0.00000309  SUCCESS  Length 1: 20 
+193  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+193  0.00000342  SUCCESS  Length 1: 53 
+198  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+198  0.00000348  SUCCESS  Length 1: 65 
+203  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+203  0.00000359  SUCCESS  Length 1: 72 
+208  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+208  0.00000263  SUCCESS  Length 1: 69 
+213  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+213  0.00000248  SUCCESS  Length 1: 65 
+218  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+218  0.00000248  SUCCESS  Length 1: 73 
+223  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+223  0.00000248  SUCCESS  Length 1: 20 
+228  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+228  0.00000258  SUCCESS  Length 1: 49 
+243  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+243  0.00000331  SUCCESS  Length 1: 49 
+248  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+248  0.00000357  SUCCESS  Length 1: 3B 
+253  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+253  0.00000371  SUCCESS  Length 1: 20 
+258  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+258  0.00000259  SUCCESS  Length 1: 56 
+263  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+263  0.00000247  SUCCESS  Length 1: 36 
+268  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+268  0.00000243  SUCCESS  Length 1: 2E 
+273  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+273  0.00000243  SUCCESS  Length 1: 33 
+278  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+278  0.00000254  SUCCESS  Length 1: 35 
+293  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+293  0.00019989  SUCCESS  Length 1: 3B 
+298  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+298  0.00000349  SUCCESS  Length 1: 20 
+303  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+303  0.00000310  SUCCESS  Length 1: 39 
+308  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+308  0.00000249  SUCCESS  Length 1: 35 
+313  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+313  0.00000252  SUCCESS  Length 1: 2D 
+318  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+318  0.00000247  SUCCESS  Length 1: 30 
+323  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+323  0.00000251  SUCCESS  Length 1: 32 
+328  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+328  0.00000257  SUCCESS  Length 1: 2D 
+343  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+343  0.00000345  SUCCESS  Length 1: 30 
+348  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+348  0.00000250  SUCCESS  Length 1: 32 
+353  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+353  0.00000248  SUCCESS  Length 1: 3B 
+358  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+358  0.00000247  SUCCESS  Length 1: 20 
+363  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+363  0.00000246  SUCCESS  Length 1: 55 
+368  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+368  0.00000246  SUCCESS  Length 1: 48 
+373  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+373  0.00000796  SUCCESS  Length 1: 4D 
+378  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+378  0.00000259  SUCCESS  Length 1: 20 
+393  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+393  0.00000320  SUCCESS  Length 1: 56 
+398  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+398  0.00000259  SUCCESS  Length 1: 31 
+403  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+403  0.00000249  SUCCESS  Length 1: 2E 
+408  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+408  0.00000238  SUCCESS  Length 1: 30 
+413  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 1
+413  0.00000254  SUCCESS  Length 1: 0D 
+422  0.00000000  ntvdm.exe  IRP_MJ_WRITE  Serial0  Length 23: 50 43 20 31 39 32 30 30 2C 4E 2C 38 2C 31 2C 58 4F 4E 58 4F 46 46 0D 
+422  0.10951682  SUCCESS  
+437  0.00000000  ntvdm.exe  IRP_MJ_READ  Serial0  Length 2
+437  0.00000346  SUCCESS  Length 2: 30 0D 
