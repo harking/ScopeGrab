@@ -9,8 +9,8 @@
 class MyFrame;
 
 // serial buffer sizes
-#define MAX_OUT_BUFFER 4096   // transmit buffer
-#define MAX_IN_BUFFER  4096   // receive buffer
+#define MAX_OUT_BUFFER 4096    // transmit buffer
+#define MAX_IN_BUFFER  16384   // receive buffer
 
 // func that runs as a separate thread and receives incoming serial data
 extern DWORD ReceiverFunc(LPVOID hostClass);

@@ -57,6 +57,8 @@
 
 #define FLUKESCREEN_WIDTH       480 // 320
 #define FLUKESCREEN_HEIGHT      480 // 240
+#define EPSONSCREEN_WIDTH       260 // 320
+#define EPSONSCREEN_HEIGHT      260 // 240
 #define IMAGE_BITDEPTH          1
 
 // ---- main prog defs and vars ----
@@ -66,11 +68,19 @@
 extern int combo_portIDs[MAX_COMPORT_COUNT]; // ID's of available ports
 extern int fluke_baudrates[];
 
+// model series of detected scopemeter
 #define SCOPEMETER_NONE         0  // none
 #define SCOPEMETER_120_SERIES 120  // 123,124
 #define SCOPEMETER_190_SERIES 190  // 192,196,199
 #define SCOPEMETER_90_SERIES   90  // 91,92,96
 #define SCOPEMETER_97_SERIES   97  // 97,99
+
+// format of the raw data the Scopemeter series returns (screenshot, waveforms)
+#define GFXFORMAT_NONE        0
+#define GFXFORMAT_POSTSCRIPT  1
+#define GFXFORMAT_EPSONESC    2
+#define GFXFORMAT_ADCSAMPLES  3
+#define GFXFORMAT_PNG         4
 
 // ---- wxWidgets application class ----
 
@@ -104,7 +114,7 @@ public:
     void        DoEvents(void);
 
     wxString    GetFlukeResponse(DWORD msTimeout);
-    wxString    QueryFluke(wxString cmdString, BOOL asciiMode, DWORD msTimeout, BOOL* ResponseIsOK);
+    wxString    QueryFluke(wxString cmdString, BOOL bAsciiMode, DWORD msTimeout, BOOL* ResponseIsOK);
 
 private:
 
@@ -170,13 +180,14 @@ private:
 
     
     // -- serial communications
-    CSerial        *mySerial;
-    wxArrayString  ReceivedStrings;
-    wxString       CurrRxString;
-    volatile BOOL  bRxReceiverActive;
-    BOOL           bRxAsciiMode;
-    DWORD          RxErrorCounter;
-    wxTimer*       tmrToggleRTS;
+    CSerial        *mySerial;               // serial port class
+    wxArrayString  ReceivedStrings;         // array of received ascii test lines
+    wxString       CurrRxString;            // local rx buffer
+    volatile BOOL  bRxReceiverActive;       // activity flag for timing out rx operations
+    BOOL           bRxAsciiMode;            // how to handle incoming data
+    BOOL           bRxBinarymodeAfterACK;   // receive ack in ASCII, further data in binary
+    DWORD          RxErrorCounter;          // count for all rx errors
+    wxTimer*       tmrToggleRTS;            // timer for generating optical cable circuit voltage supplies
 
     // -- event table
     // see start of main.cpp for the event mappings

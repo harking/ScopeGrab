@@ -1,5 +1,6 @@
 
 /*
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -13,7 +14,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-*/
+ *
+ */
 
 // ************************************************************************
 // ***                                                                  ***
@@ -140,11 +142,15 @@ int combo_portIDs[MAX_COMPORT_COUNT];
 // ----------------------------------------------------
 
 void MyFrame::DoEvents() {
-	// allow win32 messages through
+    #ifdef __WIN32__
 	MSG msg;
+	// allow win32 messages through
     while ( TRUE==::PeekMessage((LPMSG)&msg, NULL, 0, 0, PM_REMOVE) ) {
        ::TranslateMessage(&msg); ::DispatchMessage(&msg);
 	}
+	#else
+     // linux Yield() ?
+	#endif
 }
 
 // ----------------------------------------------------
@@ -210,6 +216,7 @@ void MyFrame::initBefore()
     strPostscript = "";
     ReceivedStrings.Empty();
     bRxAsciiMode = TRUE;
+    bRxBinarymodeAfterACK = FALSE;
     bRxReceiverActive = FALSE;
     bFlukeDetected = FALSE;
     RxErrorCounter = 0;
@@ -371,6 +378,7 @@ void MyFrame::VwXinit()
     return;
 }
 
+
 //
 // Safe GUI handling, enable or disable the input controls
 //
@@ -379,7 +387,8 @@ void MyFrame::GUI_Up()
     comboBaud->Enable(TRUE); comboCOM->Enable(TRUE);
     m_menuBar->EnableTop(0,TRUE);
     btnGetScreenshot->Enable(TRUE); btnSaveScreenshot->Enable(TRUE);
-    btnCopyScreenshot->Enable(TRUE); btnSavePostscript->Enable(TRUE);
+    btnCopyScreenshot->Enable(TRUE);
+    btnSavePostscript->Enable(SCOPEMETER_190_SERIES==mScopemeterType); // only 190/190C does postscript
     btnReconnect->Enable(TRUE); btnSendCommand->Enable(TRUE);
     return;
 }
@@ -389,7 +398,7 @@ void MyFrame::GUI_Down()
     comboBaud->Enable(FALSE); comboCOM->Enable(FALSE);
     m_menuBar->EnableTop(0,FALSE);
     btnGetScreenshot->Enable(FALSE); btnSaveScreenshot->Enable(FALSE);
-    btnCopyScreenshot->Enable(FALSE); btnSavePostscript->Enable(FALSE);
+    btnCopyScreenshot->Enable(FALSE);
     btnReconnect->Enable(FALSE); btnSendCommand->Enable(FALSE);
     return;
 }
@@ -405,6 +414,7 @@ void MyFrame::evtReconnect(wxCommandEvent& event)
     this->ChangeComPort();
     return;
 }
+
 
 //
 // Combo box selection: user changed the serial baud or port
@@ -447,6 +457,8 @@ void MyFrame::ChangeComPort()
     mySerial->closePort();
     CurrRxString.Clear();
     ReceivedStrings.Clear();
+
+    GUI_Down();
     ret = mySerial->openPort(port, baud, 8, ONESTOPBIT, 'N', 0);
     if(FALSE==ret)
     {
@@ -479,13 +491,22 @@ void MyFrame::ChangeComPort()
             infoStr = infoStr + " - ident=" + response;
             statusBar->SetStatusText(infoStr,0);
             // next, try to extract the scopemeter series info
-            if(1==(response.Contains(" 192") || response.Contains(" 196") || response.Contains(" 199"))) {
+            response = response.MakeUpper();
+            if(1!=response.Contains("SCOPE")) {
+                // no Fluke ScopeMeter
+                mScopemeterType = SCOPEMETER_NONE;
+                bFlukeDetected = FALSE;
+                infoStr = "(unsupported) " + infoStr;
+                statusBar->SetStatusText(infoStr,0);
+                // different ScopeMeter series:
+            } else if(1==(response.Contains(" 192") || response.Contains(" 196") || response.Contains(" 199"))) {
                 mScopemeterType = SCOPEMETER_190_SERIES;
             } else if(1==(response.Contains(" 91") || response.Contains(" 92") || response.Contains(" 96"))) {
                 mScopemeterType = SCOPEMETER_90_SERIES;
             } else if(1==(response.Contains(" 97") || response.Contains(" 99"))) {
                 mScopemeterType = SCOPEMETER_97_SERIES;
-            } else if(1==(response.Contains(" 123") || response.Contains(" 124"))) {
+            } else if(1==(response.Contains(" 123") || response.Contains(" 124")
+                      || response.Contains(" 105"))) {
                 mScopemeterType = SCOPEMETER_120_SERIES;
             } else {
                 // unsupported model
@@ -502,9 +523,11 @@ void MyFrame::ChangeComPort()
             statusBar->SetStatusText(infoStr,0);
         }
     }
-
+    
+    GUI_Up();
     return;
 }
+
 
 //
 // Button click: send user query string to the ScopeMeter
@@ -529,6 +552,7 @@ void MyFrame::evtSendCommand(wxCommandEvent& event)
     return;
 }
 
+
 //
 // Button click: Get a screenshot from the scopemeter
 //
@@ -536,11 +560,14 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
 {
     BOOL gotImage = FALSE;
     BOOL imageStart = FALSE;
-    char currbyte = 0;
+    long rxbytesremaining = 0;
+    unsigned char currbyte = 0;
     int y_counter = 0, x_counter = 0;
+    unsigned int bitnr = 0, bitval = 0;
     BYTE color = 0;
     wxBitmap* bmpTempBitmap = NULL;
-    
+    unsigned int GraphicsFormat = GFXFORMAT_NONE;
+
     if ( FALSE==bFlukeDetected ) {
         statusBar->SetStatusText("screenshot: no ScopeMeter detected",0);
         return;
@@ -553,7 +580,7 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
     
     wxBusyCursor wait; // displays hourglass, reverts back to normal automatically
     
-    // increase baud rate to 19200 (first the Fluke, then the PC)
+    // -- increase baud rate to 19200 (first the Fluke, then the PC)
     DWORD oldbaud = mySerial->getBaudrate();
     if ( oldbaud < 19200 ) {
         txtSerialTrace->AppendText("Temporarily setting Fluke baudrate to 19200...\r\n");
@@ -580,103 +607,237 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
             txtSerialTrace->AppendText("Temporarily setting PC baudrate to 19200...\r\n");
             statusBar->SetStatusText("screenshot: changing PC to 19200 baud",0);
             mySerial->setBaudrate(19200);
+            //??possibly need to add: set CSerial to Xon/Xoff handshaking for SM90/97 series
         } else {
             txtSerialTrace->AppendText("Couldn't set Fluke baurdate to 19200.\r\n");
-            statusBar->SetStatusText("screenshot: failed to set ScopeMeter to 19200 baud",0);
+            statusBar->SetStatusText("screenshot: failed to set ScopeMeter to 19200 baud, aborted",0);
             GUI_Up();
             return;
         }
     }
 
-    // get screenshot / Query Print screen 0 and postscript (3) format
+    // -- request screenshot
     switch(mScopemeterType) {
         case SCOPEMETER_190_SERIES:
         case SCOPEMETER_120_SERIES:
+            // Query Print screen 0 and postscript (3) format
             command = "QP 0,3";
+            GraphicsFormat = GFXFORMAT_POSTSCRIPT;
             statusBar->SetStatusText("screenshot: requesting postscript image",0);
             break;
         case SCOPEMETER_90_SERIES:
+            // Query Print live screen and Epson ESC sequence format
             command = "QP"; // ???correct??
+            GraphicsFormat = GFXFORMAT_EPSONESC;
             statusBar->SetStatusText("screenshot: requesting screenshot",0);
             break;
         case SCOPEMETER_97_SERIES:
+            // Query Graphics live screen and Epson ESC sequence format
             command = "QG129";
+            GraphicsFormat = GFXFORMAT_EPSONESC;
             statusBar->SetStatusText("screenshot: requesting screen graphics",0);
             break;
     }
-    response = QueryFluke(command,TRUE,1000,&respOk); // first just the <ack>
 
-    // wait for the complete graphics data to arrive, in postscript format,
-    // split over multiple lines. process the data as it comes in.
-    this->strPostscript = "";
-    while ( response.Length() > 0 ) {
-        // get next line
-        response = GetFlukeResponse(1000); // <printer or image data><cr>
+    // -- wait for graphics data to arrive
+    if ( GFXFORMAT_POSTSCRIPT==GraphicsFormat ) {
+        //
+        // Receive postscript data in ASCII mode
+        //
+        response = QueryFluke(command,TRUE,1000,&respOk); // first just the <ack>
+        this->strPostscript = "";
+        while ( (response.Length()>0) && (TRUE==respOk) ) {
+            // get next line
+            response = GetFlukeResponse(1000); // <printer or image data><cr>
 
-        // store to postscript temp var
-        this->strPostscript.Append(response);
-        this->strPostscript.Append("\r\n");
+            // store to postscript temp var
+            this->strPostscript.Append(response);
+            this->strPostscript.Append("\r\n");
         
-        // scan up to the
-        //   "... { currentfile 60 string readstring pop } image" line
-        // in the response - the image data starts on the next line
-        if ( FALSE==imageStart ) {
-            if ( response.Find("image") >= 0 ) {
-                imageStart = TRUE;
-                if ( NULL == this->imgScreenshot ) {
+            // scan up to the
+            //   "... { currentfile 60 string readstring pop } image" line
+            // in the response - the image data starts on the next line
+            if ( FALSE==imageStart ) {
+                if ( response.Find("image") >= 0 ) {
+                    imageStart = TRUE;
                     imgScreenshot=new wxImage(FLUKESCREEN_WIDTH,FLUKESCREEN_HEIGHT);
+                    this->imgScreenshot->Create(FLUKESCREEN_WIDTH,FLUKESCREEN_HEIGHT);
+                    this->imgScreenshot->SetMask(FALSE);
+                    statusBar->SetStatusText("screenshot: receiving image...",0);
                 }
-                this->imgScreenshot->Create(FLUKESCREEN_WIDTH,FLUKESCREEN_HEIGHT);
-                this->imgScreenshot->SetMask(FALSE);
-                statusBar->SetStatusText("screenshot: receiving image...",0);
+                continue;
             }
-            continue;
-        }
 
-        // a line with "showpage" indicates the end of the image data
-        if ( response.Find("showpage") >= 0 ) {
-            gotImage = TRUE;
-            break;
-        }
-
-        // process the current line
-        response = response.MakeUpper(); // (upper case HEX)
-        for ( unsigned int idx=0; idx<response.Length(); ++idx ) {
-
-            // valid hex values?
-            currbyte = response.GetChar(idx);
-            if ( !(currbyte>='0' && currbyte<='9') &&
-                 !(currbyte>='A' && currbyte<='F') )   continue;
-
-//                currbyte = remap(currbyte); // ...necessary..??
-                
-            // hex to dec
-            if(currbyte>='0' && currbyte<='9') { currbyte -= '0'; }
-            else { currbyte = 10+(currbyte-'A'); }
-                
-            // one character (0..F) marks 4 pixels (bits), with MSb on the left
-            int bitnr=0, bitval=0x08;
-            for ( bitnr=3; bitnr>=0; --bitnr, bitval/=2 ) {
-                color = 0xFF; // bit set: white
-                if ( 0==(currbyte&bitval) ) color = 0x00; // bit cleared: black
-                this->imgScreenshot->SetRGB(x_counter, y_counter, color, color, color);
-                ++x_counter;
+            // a line with "showpage" indicates the end of the image data
+            if ( response.Find("showpage") >= 0 ) {
+                gotImage = TRUE;
+                break;
             }
-        }
 
-        // update image and advance to next line
-        // parse the hex data in the current line
-        if ( x_counter>=FLUKESCREEN_WIDTH ) {
-            x_counter = 0;
-            ++y_counter;
+            // process the current line, all upper case HEX data strings
+            response = response.MakeUpper();
+            for ( unsigned int idx=0; idx<response.Length(); ++idx ) {
+                // check hex format
+                currbyte = response.GetChar(idx);
+                if ( !(currbyte>='0' && currbyte<='9') &&
+                     !(currbyte>='A' && currbyte<='F') ) { continue; }
+                // hex to dec
+                if(currbyte>='0' && currbyte<='9') { currbyte -= '0'; }
+                else { currbyte = 10+(currbyte-'A'); }
+                // one character (0..F) marks 4 pixels (bits), with MSb on the left
+                bitval=0x08;
+                for ( bitnr=3; bitnr>=0; --bitnr, bitval/=2 ) {
+                    color = 0xFF;
+                    if ( 0==(currbyte&bitval) )
+                        { color = 0x00; } // bit cleared: black
+                    this->imgScreenshot->SetRGB(x_counter, y_counter, color, color, color);
+                    ++x_counter;
+                }
+            }
+
+            // update image and advance to next line
+            // parse the hex data in the current line
+            if ( x_counter>=FLUKESCREEN_WIDTH ) {
+                x_counter = 0;
+                ++y_counter;
+            }
+            if ( NULL!=bmpTempBitmap ) { delete bmpTempBitmap; }
+            bmpTempBitmap = new wxBitmap(imgScreenshot,IMAGE_BITDEPTH);
+            sbmpScreenshot->SetBitmap(*bmpTempBitmap);
+            sbmpScreenshot->Refresh();
         }
-        if ( NULL!=bmpTempBitmap ) { delete bmpTempBitmap; }
-        bmpTempBitmap = new wxBitmap(imgScreenshot,IMAGE_BITDEPTH);
-        sbmpScreenshot->SetBitmap(*bmpTempBitmap);
-        sbmpScreenshot->Refresh();
+        // done receiving postscript image
+        
+    } else if ( GFXFORMAT_EPSONESC==GraphicsFormat ) {
+        //
+        // Receive Epson ESC code data in binary mode
+        //
+        // Before the binary graphics data starts, there's still the
+        // ack code and then the count of bytes to receive
+        // e.g. "0<cr>7454,<epson esc binary data><cr><more data><cr>...
+        //
+        rxbytesremaining = 0;
+        BOOL dataStart = FALSE;
+        wxString newstr = "";
+        const char STR_GFXSTART[] = { 0x1B, 0x2A, 0x04, '\0' };
+        const int  LEN_STR_GRFXSTART = 3;
+        
+        response = QueryFluke(command,FALSE,1000,&respOk); // <ack> still in ASCII mode
+        response = "";
+        
+        while ( (TRUE==respOk) && (FALSE==gotImage) ) {
+
+            DoEvents();
+            
+            // get next binary data byte(s)
+            newstr = GetFlukeResponse(4000); // (scopemeter can take up to 4 secs...)
+            response.Append(newstr);
+            if ( newstr.Length()<=0 ) // timeout
+            {
+                if ( (FALSE==imageStart) || (FALSE==dataStart) ) {
+                    txtSerialTrace->AppendText("Epson ESC: Fluke didn't send data, timeout error.");
+                    respOk = FALSE;
+                } else {
+                    if ( rxbytesremaining>240 ) {
+                        txtSerialTrace->AppendText("Timeout while waiting for more data. Image may be incomplete.\r\n");
+                    }
+                    gotImage = TRUE; // finished receiving the screenshot
+                }
+                break;
+            }
+            // -- start of data? read the byte count e.g. "7453,<data>"
+            if ( FALSE==dataStart ) {
+                size_t commaidx = response.Index(',');
+                if ( (size_t)wxNOT_FOUND!=commaidx ) {
+                    long ltmp = 0;
+                    wxString lenStr = response.Left(commaidx+1);
+                    if ( TRUE==lenStr.ToLong(&ltmp,10) ) {
+                        rxbytesremaining = ltmp + 1; // fluke sends x+1 bytes...
+                        txtSerialTrace->AppendText(
+                            wxString::Format("Epson ESC byte count string: '"+lenStr+"' - count=%d\r\n", rxbytesremaining) );
+                        imgScreenshot=new wxImage(EPSONSCREEN_WIDTH,EPSONSCREEN_HEIGHT);
+                        this->imgScreenshot->Create(EPSONSCREEN_WIDTH,EPSONSCREEN_HEIGHT);
+                        this->imgScreenshot->SetMask(FALSE);
+                        statusBar->SetStatusText("screenshot: receiving Epson ESC...",0);
+                        dataStart = TRUE; // actual data starts after the comma
+                    } else {
+                        statusBar->SetStatusText("screenshot: response format error",0);
+                        txtSerialTrace->AppendText("Error, unexpected Epson ESC byte count string: '"+lenStr+"'\r\n");
+                        respOk = FALSE; // quit
+                    }
+                    // remove byte-count string from response
+                    response = response.Right(response.Length()-commaidx);
+                    response.Shrink();
+                }
+                if ( (FALSE==dataStart) || (response.Length()<=0) ) { continue; }
+            }
+            // -- interpret data ESC sequences
+            size_t escIndex = response.Index(STR_GFXSTART); // 0x1B 0x2A 0x04 start of one new gfx row
+            if ( (size_t)wxNOT_FOUND==escIndex )
+                { continue; }
+            else
+                { imageStart = TRUE; }
+
+            if ( response.Length() <= (escIndex+1+LEN_STR_GRFXSTART+2) )
+                { continue; } // 2 data-len bytes avaible
+
+            int data_len =
+                response.GetChar(escIndex+LEN_STR_GRFXSTART)
+                + 256L*(int)(response.GetChar(escIndex+LEN_STR_GRFXSTART+1));
+                
+            if ( response.Length() <= (escIndex+1+LEN_STR_GRFXSTART+2+data_len) )
+                { continue; } // full data available for one row?
+
+            // get the row data
+            wxString dataStr = response.Mid(escIndex+1+LEN_STR_GRFXSTART+2, data_len);
+            
+            // truncate response buffer string
+            response = response.Mid(escIndex+1+LEN_STR_GRFXSTART+2+data_len, wxSTRING_MAXLEN);
+            response.Shrink();
+            rxbytesremaining -= escIndex+1+LEN_STR_GRFXSTART+2+data_len;
+            if ( rxbytesremaining<0 ) {
+                txtSerialTrace->AppendText("Warning: received more graphics bytes than expected...\r\n");
+                rxbytesremaining = 0;
+            }
+            
+            // parse the data into the wxwidgets bitmap
+            for ( x_counter=0;
+                  (x_counter<data_len) && (x_counter<=EPSONSCREEN_WIDTH);
+                  ++x_counter )
+            {
+                currbyte = dataStr.GetChar(x_counter);
+                bitval=1;
+                for ( bitnr=0; bitnr<8; ++bitnr,bitval*=2 ) {
+                    color = 0x00; 
+                    if ( 0==(currbyte&bitval) )
+                        { color = 0xFF; } // if bit cleared: white
+                    // highest bit is current row, lowest bit lowest row
+                    this->imgScreenshot->SetRGB(
+                            x_counter, y_counter+(7-bitnr),
+                            color, color, color);
+                }
+            }
+            y_counter += 8;
+            if ( y_counter>EPSONSCREEN_HEIGHT ) {
+                txtSerialTrace->AppendText(
+                  wxString::Format("Warning: Epson ESC image height exceeded %d pixels.\r\n",EPSONSCREEN_WIDTH)
+                );
+                gotImage = TRUE; // stop drawing if outside 260x260
+            }
+            
+            // update image
+            if ( NULL!=bmpTempBitmap ) { delete bmpTempBitmap; }
+            bmpTempBitmap = new wxBitmap(imgScreenshot,IMAGE_BITDEPTH);
+            sbmpScreenshot->SetBitmap(*bmpTempBitmap);
+            sbmpScreenshot->Refresh();
+
+        }//while(rx)
+
+        // done receiving epson esc sequence image
+
     }
 
-    // restore old baud
+    // -- image done, restore old baud
     if ( oldbaud < 19200 ) {
         txtSerialTrace->AppendText("Restoring old baudrate on Fluke...\r\n");
         statusBar->SetStatusText("screenshot: restoring baudrate",0);
@@ -688,7 +849,7 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
         }
     }
     
-    // show the final result of the operation
+    // -- show the final result of the operation
     if ( TRUE==gotImage ) {
         statusBar->SetStatusText("screenshot: complete image received",0);
         txtSerialTrace->AppendText("Screenshot complete.\r\n");
@@ -705,6 +866,7 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
     GUI_Up();
     return;
 }
+
 
 //
 // Button click: Save the current image to a BMP
@@ -741,6 +903,7 @@ void MyFrame::evtSaveImage(wxCommandEvent& event)
     return;
 }
 
+
 //
 // Button click: Copy the current image to the clipboard
 //
@@ -765,6 +928,7 @@ void MyFrame::evtClipboardImage(wxCommandEvent& event)
     }
     return;
 }
+
 
 //
 // Button click: Save to postscript file
@@ -815,13 +979,14 @@ void MyFrame::evtSavePostscript(wxCommandEvent& event)
 //
 void MyFrame::OnMenuAbout(wxMenuEvent& event)
 {
-    wxMessageBox("ScopeGrab32 v1.0 alpha\r\n\rAn open source tool for communicating\r\n"
-        "with a Fluke Scopemeter and also do a\r\nscreen capture.\r\nNamed after "
-        "Steven Merrifield's\r\nScopeGrab for Unix.\r\n\r\n(C) 2004 Jan Wagner",
+    wxMessageBox("ScopeGrab32 v2.0 alpha\r\n\rAn open source tool for communicating\r\n"
+        "with a Fluke Scopemeter and also do a\r\nscreen capture.\r\n\r\n"
+        "(C) 2004 Jan Wagner",
         "About ScopeGrab32",
         wxOK | wxICON_INFORMATION, this);
     return;
 }
+
 
 //
 // Menu: exit the program
@@ -838,6 +1003,7 @@ void MyFrame::OnMenuExit(wxMenuEvent& event)
 // -------------    SERIAL PORT FUNCS     -------------
 // ----------------------------------------------------
 
+
 //
 // Timer event: pulse the RTS pin to generate
 // Scopemeter DIY cable / circuit supply voltages
@@ -853,6 +1019,7 @@ void MyFrame::evtRtsTimer(wxTimerEvent& event)
     mySerial->setRTS(!mySerial->getRTS());
 }
 
+
 //
 // Callback func for CSerial class, receive new data bytes
 //
@@ -864,22 +1031,30 @@ void MyFrame::OnCommEvent(const BYTE* rxbuf, const DWORD rxbytes)
    // set flag to indicate that the rx line is still alive
    bRxReceiverActive = TRUE;
    
-   // wxCriticalSectionLocker buflock(csRxBufLock);
+   //(wxCriticalSectionLocker buflock(csRxBufLock);)
+   
    BYTE currByte;
    for ( DWORD i=0; i<rxbytes; ++i ) {
 
         currByte = *(rxbuf+i);
 
-        // handle characters in ASCII mode
+        // -- handle characters in ASCII mode
         if ( TRUE==this->bRxAsciiMode ) {
 
-            // a <cr> carriage return indicates the end of a block
+            // a <cr> carriage return indicates the end of an ascii block
             if ( 13==currByte ) { // '\r'
-                // insert at the start of the responses list, remove at end
-                if(CurrRxString.Length()>0) {
+                if ( CurrRxString.Length()>0 ) {
+                    // insert at the start of the responses list, remove at end
                     ReceivedStrings.Insert(CurrRxString, 0, 1);
+                    // check if we need to switch to binary mode after
+                    // now having rxed a full ascii line (the <ack> code)
+                    if ( TRUE==this->bRxBinarymodeAfterACK ) {
+                        this->bRxBinarymodeAfterACK = FALSE;
+                        this->bRxAsciiMode = FALSE;
+                    }
                 }
                 CurrRxString.Clear();
+                // next bytes
                 continue;
             }
             if ( 10==currByte ) { // '\n'
@@ -892,15 +1067,20 @@ void MyFrame::OnCommEvent(const BYTE* rxbuf, const DWORD rxbytes)
                 if(RxErrorCounter<0xFFFF) { ++RxErrorCounter; }
                 continue;
             }
+            
+        // -- handle bytes in Binary mode
+        } else {
+            // just append data, same as ascii mode, below:
         }
         
-        // append character to current string
+        // -- append character/byte to the current string
         CurrRxString.Append(currByte, 1);
         CurrRxString.Shrink();
    }
    
    return;
 }
+
 
 //
 // Wait to receive a complete response from the ScopeMeter
@@ -910,69 +1090,85 @@ wxString MyFrame::GetFlukeResponse(DWORD msTimeout)
     wxString response="";
     DWORD cnt;
     
+    // limits etc checks
     if ( msTimeout<50 || msTimeout>3000 ) { msTimeout=1000; }
     if ( NULL==mySerial || FALSE==mySerial->isOpen() ) { return wxString(""); }
 
-    // return a response that was received earlier?
+    // return a response that was received earlier? (ascii ack, or other ascii lines)
     size_t itemCount = ReceivedStrings.GetCount();
     if ( itemCount>0 ) {
+
         response = ReceivedStrings.Item(itemCount-1); // get last
         ReceivedStrings.Remove(itemCount-1, 1); // remove from end
-        goto cleanUpResponse;
-   }
-   
-    // wait for response
-    itemCount = 0;
-    cnt = 1+(msTimeout/50);
-    this->bRxReceiverActive = FALSE; // flag used to detect rx activity
-    while ( cnt>0 ) {
-        // wait
-        SleepEx(50,FALSE);
-        DoEvents();
-        // check receiver activity - did OnCommEvent() set the flag?
-        if ( TRUE==this->bRxReceiverActive ) {
-            this->bRxReceiverActive = FALSE;
-            cnt = 1+(msTimeout/50); // reset back to max timeout
-        } else {
-            --cnt; // no activity, dec timeout
+
+    // wait for new response data to come in...
+    } else {
+
+        itemCount = 0;
+        cnt = 1+(msTimeout/50);
+        this->bRxReceiverActive = FALSE; // flag used to detect rx activity
+        while ( cnt>0 ) {
+            // wait
+            SleepEx(50,FALSE);
+            DoEvents();
+            // check receiver activity - did OnCommEvent() set the flag?
+            if ( TRUE==this->bRxReceiverActive ) {
+                this->bRxReceiverActive = FALSE;
+                cnt = 1+(msTimeout/50); // reset back to max timeout
+            } else {
+                --cnt; // no activity, dec timeout
+            }
+            // check current count of available responses
+            itemCount = ReceivedStrings.GetCount();
+            if ( itemCount>0 ) break;
         }
-        // check current count of available responses
-        itemCount = ReceivedStrings.GetCount();
-        if ( itemCount>0 ) break;
-    }
 
-    // binary mode responses
-    if ( (0==itemCount) && (FALSE==this->bRxAsciiMode) ) {
-        response = CurrRxString; // return all currently received bytes
-        CurrRxString = "";
-        goto cleanUpResponse;
+        // binary mode responses
+        if ( (0==itemCount) && (FALSE==this->bRxAsciiMode) ) {
+
+            // just return all currently received bytes
+            response = CurrRxString; 
+            CurrRxString = "";       //?buffer access lock?
+            // todo: hex dump of the data into txtSerialTrace?
+
+        // ascii mode responses
+        } else {
+
+            // timeout in ascii mode
+            if ( 0==itemCount ) {
+                txtSerialTrace->AppendText("Response: (timeout)\r\n");
+                return wxString("");
+            }
+
+            // got at least 1 response string, remove it from array end
+            response = ReceivedStrings.Item(itemCount-1); // get last
+            ReceivedStrings.Remove(itemCount-1, 1); // remove from end
+
+        }//if(bin/ascii)
+
+    }//if(existing rx data)
+
+    // do a bit of ascii cleaned-up
+    if ( TRUE==this->bRxAsciiMode ) {
+        response.Replace("\r", "", TRUE);
+        response.Replace("\n", "", TRUE);
+        response.Shrink();
+        if ( response.Length()>0 ) {
+            txtSerialTrace->AppendText("Response: " + response + "\r\n");
+        }
     }
     
-    // timeout in ascii mode
-    if ( 0==itemCount ) return wxString("");
-
-    // got at least 1 response string, remove it from array end
-    response = ReceivedStrings.Item(itemCount-1); // get last
-    ReceivedStrings.Remove(itemCount-1, 1); // remove from end
-
-    // log and return a cleaned-up response
-cleanUpResponse:
-    response.Replace("\r", "", TRUE);
-    response.Replace("\n", "", TRUE);
-    response.Shrink();
-    if ( response.Length()>0 ) {
-        txtSerialTrace->AppendText("Response: " + response + "\r\n");
-    }
-    
+    // done
     return response;
 }
+
 
 //
 // Send a query to the ScopeMeter and return the ACK response.
 // The remaining response data, if it exists, can be retrieved
 // with GetFlukeResponse
 //
-wxString MyFrame::QueryFluke(wxString cmdString, BOOL bRxAsciiMode,
+wxString MyFrame::QueryFluke(wxString cmdString, BOOL bAsciiMode,
     DWORD msTimeout, BOOL* ResponseIsOK)
 {
     wxString response;
@@ -987,14 +1183,18 @@ wxString MyFrame::QueryFluke(wxString cmdString, BOOL bRxAsciiMode,
     // add cmd terminator char (carriage return)
     cmdString.Append("\r");
     
-    // set the response mode (ASCII or binary)
-    this->bRxAsciiMode = bRxAsciiMode;
-    
-    // clear current rx buffer
-    RxErrorCounter = 0;
-    CurrRxString = "";
-    bRxReceiverActive = FALSE;
-    
+    // clear current rx buffer and reset settings to defaults
+    this->RxErrorCounter = 0;
+    this->CurrRxString = "";
+    this->ReceivedStrings.Empty();
+    this->bRxReceiverActive = FALSE;
+    this->bRxAsciiMode = TRUE;
+    this->bRxBinarymodeAfterACK = FALSE; // full ascii rx
+
+    // modify flag for response mode ascii+bin (ascii <ack> followed by binary)
+    // the mode will be switched later in OnCommEvent
+    if ( FALSE==bAsciiMode ) { this->bRxBinarymodeAfterACK=TRUE; }
+
     // send the command
     txtSerialTrace->AppendText("Query: " + cmdString + "\n");
     wxCharBuffer dataToSend = cmdString.mb_str();
@@ -1003,18 +1203,19 @@ wxString MyFrame::QueryFluke(wxString cmdString, BOOL bRxAsciiMode,
         )
     {
        txtSerialTrace->AppendText(
-         wxString::Format("Query Error: transmitData failed, win32 error 0x%lX\r\n",
+         wxString::Format("Query Error: transmitData failed, win32 error 0x%04lX\r\n",
             mySerial->getLastError()) );
+       if ( NULL!=ResponseIsOK ) *ResponseIsOK = FALSE;
+       return "";
     }
     
-    // get the <ack> response
+    // get the <ack> response (always ASCII)
     response = GetFlukeResponse(msTimeout);
 
-    // handle the response
+    // handle the <ack> response
     if ( RxErrorCounter>0 ) {
        txtSerialTrace->AppendText(wxString::Format("Response ACK: encountered %ld errors\r\n", RxErrorCounter));
     }
-    
     if ( 0 == response.Length() ) {
 
         txtSerialTrace->AppendText("Response ACK timeout\r\n");

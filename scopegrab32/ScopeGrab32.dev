@@ -11,8 +11,8 @@ PrivateResource=ScopeGrab32_private.rc
 ResourceIncludes=
 MakeIncludes=
 Compiler=
-CppCompiler=-DWINVER=0x0400 _@@_-D__WIN95__ _@@_-D__GNUWIN32__ _@@_-D__WIN32__ _@@_-DHAVE_W32API_H  _@@_-D__WXMSW__ _@@_-D__WINDOWS__ _@@_-Wall _@@_-DXCP_TIMINGCHECK_@@_-DXCP_STRICT_@@_-fno-pcc-struct-return _@@_-fstrict-aliasing _@@_-g3_@@_-O0_@@_
-Linker=-Wl,--subsystem,windows -mwindows -lwxmsw -lstdc++ -lgcc -lodbc32 _@@_-lwsock32 _@@_-lwinspool _@@_-lwinmm _@@_-lshell32 _@@_-lcomctl32 _@@_-lctl3d32 _@@_-ladvapi32 _@@_-lopengl32 _@@_-lglu32 _@@_-lole32 _@@_-loleaut32 _@@_-luuid  _@@_-lsetupapi_@@_
+CppCompiler=-DWINVER=0x0400 _@@_-D__WIN95__ _@@_-D__GNUWIN32__ _@@_-D__WIN32__ _@@_-D__WXMSW__ _@@_-D__WINDOWS__ _@@_-DHAVE_W32API_H  _@@_-Wall _@@_-fno-pcc-struct-return _@@_-fstrict-aliasing _@@_-g3_@@_-O0_@@_
+Linker=-Wl,--subsystem,windows -mwindows -lwxmsw -lstdc++ _@@_-lgcc _@@_-lcomctl32 _@@_-lwinspool _@@_-lwsock32_@@_-lole32_@@_-luuid_@@_
 IsCpp=1
 Icon=ScopeGrab32.ico
 ExeOutput=
@@ -50,14 +50,14 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [VersionInfo]
-Major=1
+Major=2
 Minor=0
 Release=0
-Build=0
+Build=1
 LanguageID=1033
 CharsetID=1252
 CompanyName=
-FileVersion=1.0.0.0
+FileVersion=2.0.0.0
 FileDescription=Serial comm tool for the Fluke ScopeMeter seriesl
 InternalName=
 LegalCopyright=2004 Jan Wagner

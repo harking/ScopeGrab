@@ -149,12 +149,13 @@ BOOL CSerial::openPort(
 	commDCB.fAbortOnError      = FALSE; // allow continuing despite a set error flag
 	commDCB.fDummy2   = 0;
 	commDCB.ErrorChar = '*';
+	commDCB.fErrorChar = FALSE;   // don't replace parity err bytes with ErrorChar
 	commDCB.EofChar   = 0x01;
 	commDCB.EvtChar   = 0x02;
-	commDCB.XonChar   = 0x13;
-	commDCB.XonLim    = 2048;
-	commDCB.XoffChar  = 0x11;
-	commDCB.XoffLim   = 512;
+	commDCB.XonChar   = 0x11;
+	commDCB.XonLim    = MAX_IN_BUFFER-16; // RX with up to full rx buffer, 16 spare
+	commDCB.XoffChar  = 0x13;
+	commDCB.XoffLim   = 16;     // halt sender when RX buffer full with 16 spare
 
 	// finally, try to apply these changes
 	if ( !SetCommState(this->m_portHdl, &commDCB) ) {
@@ -479,7 +480,7 @@ BOOL CSerial::transmitData(const BYTE* databuf, const DWORD bytecount) {
 
     DWORD commErr = 0;
     ClearCommError(m_portHdl, &commErr, NULL); // clear error flags
-    result = WaitForSingleObject ( this->m_overlapTx.hEvent, INFINITE ); // blocking wait
+    result = WaitForSingleObject ( this->m_overlapTx.hEvent, (1000+bytecount*10) ); // blocking wait, 1sec max plus 10ms per byte
 
     switch (result) {
 
