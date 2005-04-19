@@ -213,7 +213,9 @@ BEGIN_EVENT_TABLE(MyFrame,wxFrame)
     EVT_BUTTON(ID_BTN_SAVEPOSTSCRIPT, MyFrame::evtSavePostscript)
 
     EVT_TIMER(ID_RTSTIMER, MyFrame::evtRtsTimer)
-  
+    
+    EVT_CHAR(MyFrame::evtKeyDown)
+    
 END_EVENT_TABLE()
 
 // ----------------------------------------------------
@@ -272,10 +274,10 @@ VwX_INIT_OBJECTS_MyFrame
  {
    // init window
    Create(parent,id,title,pos,size,style,name);
-   if((pos==wxDefaultPosition)&&(size==wxDefaultSize)){
+   if( (pos==wxDefaultPosition) && (size==wxDefaultSize) ){
       SetSize(1,1,WINDOW_WIDTH,WINDOW_HEIGHT);
    }
-   if((pos!=wxDefaultPosition)&&(size==wxDefaultSize)){
+   if( (pos!=wxDefaultPosition) && (size==wxDefaultSize) ){
       SetSize(WINDOW_WIDTH,WINDOW_HEIGHT);
    }
    this->SetThemeEnabled(false);
@@ -310,7 +312,9 @@ void MyFrame::initBefore()
     bRxReceiverActive = FALSE;
     bFlukeDetected = FALSE;
     bGotScreenshot = FALSE;
+    bEscKey = FALSE;
     RxErrorCounter = 0;
+    RxTotalBytecount = 0;
     mScopemeterType = SCOPEMETER_NONE;
 }
 
@@ -478,6 +482,7 @@ void MyFrame::GUI_Up()
 {
     comboBaud->Enable(TRUE); comboCOM->Enable(TRUE);
     m_menuBar->EnableTop(0,TRUE);
+    m_menuBar->EnableTop(1,TRUE);
     btnGetScreenshot->Enable(TRUE); btnSaveScreenshot->Enable(TRUE);
     btnCopyScreenshot->Enable(TRUE);
     btnSavePostscript->Enable(SCOPEMETER_190_SERIES==mScopemeterType); // only 190/190C does postscript
@@ -489,12 +494,29 @@ void MyFrame::GUI_Down()
 {
     comboBaud->Enable(FALSE); comboCOM->Enable(FALSE);
     m_menuBar->EnableTop(0,FALSE);
+    m_menuBar->EnableTop(1,FALSE);
     btnGetScreenshot->Enable(FALSE); btnSaveScreenshot->Enable(FALSE);
     btnCopyScreenshot->Enable(FALSE);
     btnReconnect->Enable(FALSE); btnSendCommand->Enable(FALSE);
     return;
 }
 
+//
+// Keypress: catch 'ESC' key presses (this actually works
+//           only if the main frame is selected, not one
+//           of the contained panels or textboxes... No 
+//           workaround yet...)
+//
+void MyFrame::evtKeyDown(wxKeyEvent& event)
+{
+    if ( WXK_ESCAPE==event.GetKeyCode() ) { 
+        if ( NULL!=this->txtSerialTrace ) {
+            txtSerialTrace->AppendText("<user hit the ESC key>\r\n");
+        }
+        this->bEscKey = TRUE; 
+    }
+    event.Skip();   
+}
 
 
 //
@@ -596,6 +618,7 @@ void MyFrame::ChangeComPort()
             statusBar->SetStatusText(infoStr,0);
             // next, try to extract the scopemeter series info
             response = response.MakeUpper();
+            response = response.BeforeFirst(';');
             if(1!=response.Contains("SCOPE")) {
                 // no Fluke ScopeMeter
                 mScopemeterType = SCOPEMETER_NONE;
@@ -734,6 +757,7 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
     // -- request screenshot
 
     bGotScreenshot = FALSE;
+    RxTotalBytecount = 0;
     
     switch(mScopemeterType) {
         case SCOPEMETER_190_SERIES:
@@ -751,13 +775,14 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
             break;
         case SCOPEMETER_97_SERIES:
             // Query Graphics live screen and Epson ESC sequence format
-            command = "QG129";
+            command = "QP"; // QP seems to work too (was "QG129")
             GraphicsFormat = GFXFORMAT_EPSONESC;
             statusBar->SetStatusText("screenshot: requesting screen graphics",0);
             break;
     }
 
     // -- wait for graphics data to arrive
+    this->bEscKey = FALSE;
     if ( GFXFORMAT_POSTSCRIPT==GraphicsFormat ) {
         //
         // Receive postscript data in ASCII mode
@@ -775,6 +800,14 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
             #else
             response = GetFlukeResponse(1000); // <printer or image data><cr>
             #endif
+            
+            // interrupt if user wants
+            if ( TRUE==this->bEscKey ) {
+                statusBar->SetStatusText("screenshot: user cancelled (ESC)",0);                
+                gotImage = FALSE;
+                this->bEscKey = FALSE;
+                break;    
+            }
             
             // store to postscript temp var
             this->strPostscript.Append(response);
@@ -850,12 +883,13 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
         const char STR_GFXSTART[] = { 0x1B, 0x2A, 0x04, '\0' };
         const int  LEN_STR_GRFXSTART = 3;
         unsigned int data_len = 0;
+        unsigned int imageblock_retries = 0;
         
         #ifdef SIMULATE
         unsigned int simByteCounter = 0;
         respOk = TRUE;
         #else
-        response = QueryFluke(command,FALSE,1000,&respOk); // false->binary mode, <ack> still rx'ed in ASCII mode
+        response = QueryFluke(command,FALSE,1000,&respOk); // false=>binary mode, <ack> still rx'ed in ASCII mode
         #endif
         response = "";
         
@@ -876,23 +910,43 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
                 }
             }
             #else
-            newstr = GetFlukeResponse(4000); // (scopemeter can take up to 4 secs...)
+            // get more data
+            if ( FALSE==dataStart || response.Length()<=256 || imageblock_retries>0 ) {
+                txtSerialTrace->AppendText(
+                   wxString::Format("Epson ESC: waiting for more binary data... (try %d)\r\n", imageblock_retries) );
+                newstr = GetFlukeResponse(5000); // (scopemeter can take up to 5 secs before starting response...)
+            } else {
+                newstr = "";
+            }
             #endif
             
-            response.Append(newstr);
-            if ( newstr.Length()<=0 ) // timeout
+            if ( newstr.Length()>0 ) { response.Append(newstr); }
+            
+            // check for timeouts or too many reattempts
+            if ( (newstr.Length()<=0)  // timeout
+                 && ( response.Length()<=0 || imageblock_retries>=3 ) // no other data
+               ) 
             {
+                gotImage = TRUE; // finished receiving the screenshot                
                 if ( (FALSE==imageStart) || (FALSE==dataStart) ) {
                     txtSerialTrace->AppendText("Epson ESC: Fluke didn't send data, timeout error.");
                     respOk = FALSE;
-                } else {
-                    if ( rxbytesremaining>240 ) {
-                        txtSerialTrace->AppendText("Timeout while waiting for more data. Image may be incomplete.\r\n");
-                    }
-                    gotImage = TRUE; // finished receiving the screenshot
+                    gotImage = FALSE;
+                } else if ( rxbytesremaining>240 || imageblock_retries>=3 ) {
+                    txtSerialTrace->AppendText("Timeout while waiting for more data. Image may be incomplete.\r\n");
+                    gotImage = FALSE;
                 }
                 break;
             }
+
+            // -- interrupt now if user wants
+            if ( TRUE==this->bEscKey ) {
+                statusBar->SetStatusText("screenshot: user cancelled (ESC)",0);                
+                gotImage = FALSE;
+                this->bEscKey = FALSE;
+                break;    
+            }
+            
             // -- start of data? read the byte count e.g. "7453,<data>"
             if ( FALSE==dataStart ) {
                 if ( response.Length()<5 ) continue;
@@ -900,10 +954,11 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
                 if ( (size_t)wxNOT_FOUND!=commaidx ) {
                     long ltmp = 0;
                     wxString lenStr = response.Left(commaidx);
+                    lenStr.Replace("\r", "", TRUE);
+                    lenStr.Replace("\n", "", TRUE);
                     if ( TRUE==lenStr.ToLong(&ltmp,10) ) {
                         rxbytesremaining = ltmp + 1; // fluke sends x+1 bytes...
-                        txtSerialTrace->AppendText(
-                            wxString::Format("Epson ESC byte count string: '"+lenStr+"' - count=%d\r\n", rxbytesremaining) );
+                        txtSerialTrace->AppendText("Epson ESC byte count string: '"+lenStr+"'\r\n");
                         imgScreenshot=new wxImage(EPSONSCREEN_WIDTH,EPSONSCREEN_HEIGHT);
                         this->imgScreenshot->Create(EPSONSCREEN_WIDTH,EPSONSCREEN_HEIGHT);
                         this->imgScreenshot->SetMask(FALSE);
@@ -927,6 +982,7 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
             }
 
             // -- interpret data ESC sequences
+            imageblock_retries++;
             size_t escIndex = response.Index(STR_GFXSTART); // 0x1B 0x2A 0x04 start of one new gfx row
             if ( (size_t)wxNOT_FOUND==escIndex ) {
                 if ( (response.Length()>256) && (FALSE==imageStart) ) {
@@ -935,13 +991,17 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
                 } else {
                     continue;
                 }
-            } else { imageStart = TRUE; }
+            } else { 
+                txtSerialTrace->AppendText(wxString::Format("Epson ESC: got start sequence, line %d\r\n", y_counter));
+                imageStart = TRUE; 
+            }
 
             if ( response.Length() <= (escIndex+1+LEN_STR_GRFXSTART+2) )
                 { continue; } // wait until 2 data-length-bytes avaible
 
             data_len = (unsigned char)response.GetChar(escIndex+LEN_STR_GRFXSTART)
                 + 256L*((unsigned char)response.GetChar(escIndex+LEN_STR_GRFXSTART+1));
+            txtSerialTrace->AppendText(wxString::Format("Epson ESC: data len of line %d is %d bytes, %ld remaining, currently got %d\r\n", y_counter, data_len, rxbytesremaining, response.Length()));
                 
             if ( response.Length() <= (escIndex+1+LEN_STR_GRFXSTART+2+data_len) )
                 { continue; } // wait until full data available for one row
@@ -952,12 +1012,12 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
             // truncate response buffer string
             response = response.Mid(escIndex+1+LEN_STR_GRFXSTART+2+data_len, wxSTRING_MAXLEN);
             //response.Shrink();
-            rxbytesremaining -= escIndex+1+LEN_STR_GRFXSTART+2+data_len;
+            rxbytesremaining -= LEN_STR_GRFXSTART+2+data_len;
             if ( rxbytesremaining<0 ) {
                 txtSerialTrace->AppendText("Warning: received more graphics bytes than expected...\r\n");
                 rxbytesremaining = 0;
             }
-            
+
             // parse the data into the wxwidgets bitmap
             for ( x_counter=0;
                   (x_counter<data_len) && (x_counter<=EPSONSCREEN_WIDTH);
@@ -986,6 +1046,7 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
                 );
                 gotImage = TRUE; // stop drawing if outside 260x260
             }
+            imageblock_retries = 0; // reset, until next block
             
             // update image
             if ( NULL!=bmpTempBitmap ) { delete bmpTempBitmap; }
@@ -998,6 +1059,8 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
         // done receiving epson esc sequence image
         if ( TRUE==dataStart ) { bGotScreenshot = TRUE; }
     }
+
+    txtSerialTrace->AppendText(wxString::Format("debug: received %ld bytes in total.\r\n", RxTotalBytecount));
 
     // -- image done, restore old baud
     #ifndef SIMULATE
@@ -1017,7 +1080,6 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
     if ( TRUE==gotImage ) {
         statusBar->SetStatusText("screenshot: complete image received",0);
         txtSerialTrace->AppendText("Screenshot complete.\r\n");
-
     } else {
         if ( FALSE==imageStart ) {
             txtSerialTrace->AppendText("Screenshot error: the response did not contain any image\r\n");
@@ -1040,7 +1102,7 @@ void MyFrame::evtSaveImage(wxCommandEvent& event)
 {
     wxString filePath;
     // screenshot available?
-    if ( strPostscript.Length()<128 ) {
+    if ( FALSE==bGotScreenshot ) {
         statusBar->SetStatusText("save image: error, no screenshot available!",0);
         return;
     }
@@ -1146,7 +1208,9 @@ void MyFrame::OnMenuAbout(wxMenuEvent& event)
 {
     wxMessageBox("ScopeGrab32 v2.0 alpha\r\n\rAn open source tool for communicating\r\n"
         "with a Fluke Scopemeter and also do a\r\nscreen capture.\r\n\r\n"
-        "(C) 2004 Jan Wagner",
+        "Supported models: 190 and 190C series\r\n\r\n"
+        "Alpha 'support': 123,124,91,92,96 and 97,99\r\n\r\n"
+        "(C) 2005 Jan Wagner",
         "About ScopeGrab32",
         wxOK | wxICON_INFORMATION, this);
     return;
@@ -1201,8 +1265,11 @@ void MyFrame::OnCommEvent(const BYTE* rxbuf, const DWORD rxbytes)
    
    // set flag to indicate that the rx line is still alive
    bRxReceiverActive = TRUE;
+
+   // keep statistics
+   RxTotalBytecount += rxbytes;
    
-   //(wxCriticalSectionLocker buflock(csRxBufLock);)
+   //wxCriticalSectionLocker buflock(csRxBuf);
    
    BYTE currByte;
    for ( DWORD i=0; i<rxbytes; ++i ) {
@@ -1212,6 +1279,10 @@ void MyFrame::OnCommEvent(const BYTE* rxbuf, const DWORD rxbytes)
         // -- handle characters in ASCII mode
         if ( TRUE==this->bRxAsciiMode ) {
 
+            if ( 10==currByte ) { // '\n'
+                continue;
+            }
+            
             // a <cr> carriage return indicates the end of an ascii block
             if ( 13==currByte ) { // '\r'
                 if ( CurrRxString.Length()>0 ) {
@@ -1228,10 +1299,7 @@ void MyFrame::OnCommEvent(const BYTE* rxbuf, const DWORD rxbytes)
                 // next bytes
                 continue;
             }
-            if ( 10==currByte ) { // '\n'
-                continue;
-            }
-        
+
             // check for valid characters
             if ( currByte<32 || currByte>127 ) {
                 // illegal char, inc error counter, skip char
@@ -1260,13 +1328,14 @@ wxString MyFrame::GetFlukeResponse(DWORD msTimeout)
 {
     wxString response="";
     DWORD cnt;
+    BOOL respIsAscii = FALSE; // flag, True=print response as text to txtSerialTrace
 
     #ifdef SIMULATE
     return wxString("");
     #endif
     
     // limits etc checks
-    if ( msTimeout<50 || msTimeout>3000 ) { msTimeout=1000; }
+    if ( msTimeout<200 || msTimeout>3000 ) { msTimeout=1000; }
     if ( NULL==mySerial || FALSE==mySerial->isOpen() ) { return wxString(""); }
 
     // return a response that was received earlier? (ascii ack, or other ascii lines)
@@ -1275,21 +1344,22 @@ wxString MyFrame::GetFlukeResponse(DWORD msTimeout)
 
         response = ReceivedStrings.Item(itemCount-1); // get last
         ReceivedStrings.Remove(itemCount-1, 1); // remove from end
+        respIsAscii = TRUE;
 
     // wait for new response data to come in...
     } else {
 
         itemCount = 0;
-        cnt = 1+(msTimeout/50);
+        cnt = 1+(msTimeout/200);
         this->bRxReceiverActive = FALSE; // flag used to detect rx activity
         while ( cnt>0 ) {
             // wait
-            SleepEx(50,FALSE);
+            SleepEx(200,FALSE);
             DoEvents();
             // check receiver activity - did OnCommEvent() set the flag?
             if ( TRUE==this->bRxReceiverActive ) {
                 this->bRxReceiverActive = FALSE;
-                cnt = 1+(msTimeout/50); // reset back to max timeout
+                cnt = 1+(msTimeout/200); // reset back to max timeout
             } else {
                 --cnt; // no activity, dec timeout
             }
@@ -1307,6 +1377,7 @@ wxString MyFrame::GetFlukeResponse(DWORD msTimeout)
             if ( itemCount>0 ) {
                 response = ReceivedStrings.Item(itemCount-1); // get last
                 ReceivedStrings.Remove(itemCount-1, 1); // remove from end
+                respIsAscii = TRUE;
             } else {
                 // just return all currently received bytes
                 response = CurrRxString;
@@ -1326,13 +1397,14 @@ wxString MyFrame::GetFlukeResponse(DWORD msTimeout)
             // got at least 1 response string, remove it from array end
             response = ReceivedStrings.Item(itemCount-1); // get last
             ReceivedStrings.Remove(itemCount-1, 1); // remove from end
-
+            respIsAscii = TRUE;
+            
         }//if(bin/ascii)
 
     }//if(existing rx data)
 
     // do a bit of ascii cleaned-up
-    if ( TRUE==this->bRxAsciiMode ) {
+    if ( TRUE==respIsAscii ) {
         response.Replace("\r", "", TRUE);
         response.Replace("\n", "", TRUE);
         //response.Shrink();

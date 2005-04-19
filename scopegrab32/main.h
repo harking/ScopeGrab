@@ -30,6 +30,8 @@
 #include <wx/filedlg.h>
 #include <wx/file.h>
 #include <wx/clipbrd.h>
+#include <wx/event.h>
+#include <wx/thread.h>
 
 // ---- other headers ----
 
@@ -107,7 +109,7 @@ public:
     MyFrame(wxWindow* parent, wxWindowID id, const wxString& title,
         const wxPoint& pos = wxDefaultPosition,
         const wxSize& size = wxDefaultSize,
-        long style = wxCAPTION|wxMINIMIZE_BOX|wxMAXIMIZE_BOX|wxSYSTEM_MENU,
+        long style = wxCAPTION|wxMINIMIZE_BOX|wxMAXIMIZE_BOX|wxSYSTEM_MENU|wxWANTS_CHARS,
         const wxString& name = wxT("frame"));
     ~MyFrame();
     void VwXinit();
@@ -143,6 +145,8 @@ private:
     void        evtSavePostscript(wxCommandEvent& event);
     // timer event, toggles the RTS pin to generate negative rail
     void        evtRtsTimer(wxTimerEvent& event);
+    // key press
+    void        evtKeyDown(wxKeyEvent& event);
 
     // -- GUI components
     wxMenuBar   *m_menuBar;
@@ -176,6 +180,7 @@ private:
     wxStaticBitmap *sbmpScreenshot;    // image painted to the display
     wxImage        *imgScreenshot;     // actual image content
     BOOL           bGotScreenshot;     // TRUE when image contains a screenshot
+    volatile BOOL  bEscKey;            // TRUE after user presses 'ESC'
     wxString       strPostscript;      // postscript version of the image
     wxString       strPrevSavePath;    // previous path used when saving file
     int            mScopemeterType;    // detected scopemeter, default: SCOPEMETER_NONE
@@ -190,8 +195,10 @@ private:
     BOOL           bRxAsciiMode;            // how to handle incoming data
     BOOL           bRxBinarymodeAfterACK;   // receive ack in ASCII, further data in binary
     DWORD          RxErrorCounter;          // count for all rx errors
+    DWORD          RxTotalBytecount;        // for debug or statistics
     wxTimer*       tmrToggleRTS;            // timer for generating optical cable circuit voltage supplies
-
+    wxCriticalSection csRxBuf;
+    
     // -- event table
     // see start of main.cpp for the event mappings
     DECLARE_EVENT_TABLE()
