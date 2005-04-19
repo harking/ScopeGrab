@@ -21,7 +21,7 @@
 // ***  ScopeGrab32 - A tool for the Fluke ScopeMeter series            ***
 // ***  (C) 2004 Jan Wagner                                             ***
 // ***                                                                  ***
-// ***  Version: 2.0.0 alpha                                            ***
+// ***  Version: 2.0.1 alpha                                            ***
 // ***                                                                  ***
 // ***  Licence: GNU GPL                                                ***
 // ***                                                                  ***
@@ -100,6 +100,7 @@
 // ***                                                                  ***
 // ************************************************************************
 
+//#define SIMULATE
 
 #ifdef SIMULATE
   #define SIM_BYTESPERRX 50
@@ -1295,15 +1296,23 @@ wxString MyFrame::GetFlukeResponse(DWORD msTimeout)
             // check current count of available responses
             itemCount = ReceivedStrings.GetCount();
             if ( itemCount>0 ) break;
+            // in binary mode, just wait for timeout after last byte is received
         }
 
         // binary mode responses
         if ( FALSE==this->bRxAsciiMode ) {
 
-            // just return all currently received bytes
-            response = CurrRxString; 
-            CurrRxString = "";       //?buffer access lock?
-            // todo: hex dump of the data into txtSerialTrace?
+            // binary mode, if previous ASCII ack was received
+            // then return it first!
+            if ( itemCount>0 ) {
+                response = ReceivedStrings.Item(itemCount-1); // get last
+                ReceivedStrings.Remove(itemCount-1, 1); // remove from end
+            } else {
+                // just return all currently received bytes
+                response = CurrRxString;
+                CurrRxString = "";       //?buffer access lock?
+                // todo: hex dump of the data into txtSerialTrace?
+            }
 
         // ascii mode responses
         } else {
@@ -1383,21 +1392,24 @@ wxString MyFrame::QueryFluke(wxString cmdString, BOOL bAsciiMode,
        return "";
     }
     
-    // get the <ack> response (always ASCII)
+    // get the <ack> response (ASCII always, even when bAsciiMode==FALSE)
     response = GetFlukeResponse(msTimeout);
-
+    response.Replace("\r", "", TRUE);
+    response.Replace("\n", "", TRUE);
+        
     // handle the <ack> response
+    if ( NULL!=ResponseIsOK ) {
+        *ResponseIsOK = FALSE;
+    }
     if ( RxErrorCounter>0 ) {
        txtSerialTrace->AppendText(wxString::Format("Response ACK: encountered %ld errors\r\n", RxErrorCounter));
     }
     if ( 0 == response.Length() ) {
 
         txtSerialTrace->AppendText("Response ACK timeout\r\n");
-        if ( NULL!=ResponseIsOK ) *ResponseIsOK = FALSE;
 
     } else if ( 1 == response.Length() ) {
         char ackCode = response.GetChar(0);
-        if ( NULL!=ResponseIsOK ) *ResponseIsOK = FALSE;
         switch(ackCode) {
          case '0': if ( NULL!=ResponseIsOK ) { *ResponseIsOK = TRUE; }
                   break; // ACK0, No error
@@ -1412,7 +1424,6 @@ wxString MyFrame::QueryFluke(wxString cmdString, BOOL bAsciiMode,
     } else { // response ack length>1
 
         txtSerialTrace->AppendText("Response error: expected an ACK code. Instead got <"+ response + ">\r\n");
-        if ( NULL!=ResponseIsOK ) *ResponseIsOK = FALSE;
 
     }
     
