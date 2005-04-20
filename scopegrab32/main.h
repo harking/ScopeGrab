@@ -53,6 +53,7 @@
 #define ID_BTN_RECONNECT        12
 #define ID_RTSTIMER             13
 #define ID_TXTCTL_CONSOLECMD    14
+#define ID_BTN_WAVE             15
 
 #define WINDOW_WIDTH            655
 #define WINDOW_HEIGHT           665
@@ -125,9 +126,11 @@ private:
     // -- GUI safety funcs
     void        GUI_Down();
     void        GUI_Up();
+    void        GUI_State(BOOL on);
 
     // -- internal vars init
     void        initBefore();
+    void        ResetModeldependendGUI();
  
     // -- event handlers
     // menu
@@ -143,6 +146,7 @@ private:
     void        evtClipboardImage(wxCommandEvent& event);
     void        evtSaveImage(wxCommandEvent& event);
     void        evtSavePostscript(wxCommandEvent& event);
+    void        evtGetWaveform(wxCommandEvent& event);
     // timer event, toggles the RTS pin to generate negative rail
     void        evtRtsTimer(wxTimerEvent& event);
     // key press
@@ -158,9 +162,9 @@ private:
     wxComboBox  *comboBaud;
  
     wxNotebook  *nbNote;;
-    wxPanel     *pn_1;
-    wxPanel     *pn_2;
-    wxPanel     *pn_3;
+    wxPanel     *pnlCapture;
+    wxPanel     *pnlConsole;
+    wxPanel     *pnlTools;
 
     wxTextCtrl  *txtSerialTrace;
     wxTextCtrl  *txtCommandToSend;
@@ -176,6 +180,11 @@ private:
     wxButton       *btnSaveScreenshot;
     wxButton       *btnSavePostscript;
     wxButton       *btnReconnect;
+
+    wxStaticText   *st_4;
+    wxComboBox     *comboWaveforms;
+    wxButton       *btnGetWaveform;
+    wxTextCtrl     *txtWavestring;
 
     wxStaticBitmap *sbmpScreenshot;    // image painted to the display
     wxImage        *imgScreenshot;     // actual image content

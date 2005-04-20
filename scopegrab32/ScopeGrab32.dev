@@ -51,16 +51,16 @@ BuildCmd=
 
 [VersionInfo]
 Major=2
-Minor=0
+Minor=1
 Release=0
 Build=1
 LanguageID=1033
 CharsetID=1252
 CompanyName=
-FileVersion=2.0.0.0
-FileDescription=Serial comm tool for the Fluke ScopeMeter seriesl
+FileVersion=2.1.0
+FileDescription=Serial comm tool for the Fluke ScopeMeter series
 InternalName=
-LegalCopyright=2004 Jan Wagner
+LegalCopyright=2005 Jan Wagner
 LegalTrademarks=
 OriginalFilename=ScopeGrab32
 ProductName=ScopeGrab32
