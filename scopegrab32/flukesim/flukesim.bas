@@ -12,6 +12,8 @@
 '
 '==============================================================================
 
+$ROOTPATH = "D:\cvsSource\scopegrab32\flukesim\" ' with \ at the end, location on .bin files
+
 #DEBUG ERROR ON
 #COMPILE EXE
 #REGISTER NONE
@@ -160,6 +162,17 @@ FUNCTION WINMAIN (BYVAL hInstance AS LONG, _
             CALL COMsendResponse("0", 1)
             CONTROL GET TEXT hWnd, 1 TO tmpStr
             CONTROL SET TEXT hWnd, 1, tmpStr + "Changed baud to 1200" + CHR$(13,10) + "<TX> ack 0" + CHR$(13,10)
+        ELSEIF INSTR(reqStr,"QW")>0 THEN
+            CONTROL GET TEXT hWnd, 1 TO tmpStr
+            CONTROL SET TEXT hWnd, 1, tmpStr + "<TX> contents of 97wavea.bin" + CHR$(13,10)
+            i = FREEFILE
+            OPEN $ROOTPATH+"97wavea.bin" FOR BINARY ACCESS READ AS i
+            FOR j=1 TO LOF(i) STEP 64
+                SEEK i, j
+                GET$ i, 64, txBuf
+                CALL COMsendResponse(txBuf, 0)
+            NEXT j
+            CLOSE i
         ELSEIF INSTR(reqStr,"QG129")>0 OR INSTR(reqStr,"QP")>0 THEN
             'CALL COMsendResponse("0", 1)
             'CALL COMsendResponse(CHR$(&H37,&H34,&H35,&H33,&H2C),0)
@@ -175,7 +188,7 @@ FUNCTION WINMAIN (BYVAL hInstance AS LONG, _
             '    UpdateWindow hWnd
             'NEXT i
             i = FREEFILE
-            OPEN "D:\VStudioSource\scopegrab\flukesim\epsonesc.bin" FOR BINARY ACCESS READ AS i
+            OPEN $ROOTPATH+"epsonesc.bin" FOR BINARY ACCESS READ AS i
             FOR j=1 TO LOF(i) STEP 64
                 SEEK i, j
                 GET$ i, 64, txBuf
