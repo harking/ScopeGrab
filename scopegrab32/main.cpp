@@ -1089,12 +1089,9 @@ void MyFrame::evtClipboardImage(wxCommandEvent& event)
         statusBar->SetStatusText("copy to clipbrd: error, no screenshot available!",0);
         return;
     }
-    // create a cut&paste'able copy of the currently visible bitmap
-    wxBitmapDataObject* bmpDataObj =
-         new wxBitmapDataObject ( sbmpScreenshot->GetBitmap() );
-    // try to place it on the clipboard
+    // try to place bitmap on the clipboard
     if( TRUE==wxTheClipboard->Open() ) {
-        wxTheClipboard->SetData ( bmpDataObj );
+        wxTheClipboard->SetData ( new wxBitmapDataObject(sbmpScreenshot->GetBitmap()) );
         wxTheClipboard->Flush(); // keeps image on clipbrd even after this app exits
         wxTheClipboard->Close();
         statusBar->SetStatusText("copy to clipbrd: done.",0);
@@ -1154,18 +1151,23 @@ void MyFrame::evtSavePostscript(wxCommandEvent& event)
 // 
 void MyFrame::evtGetWaveform(wxCommandEvent& event)
 {
-    int         wave;
-    void        *queryPtr;
-    wxString    query, response;
-    BOOL        respOk, gotFullWF;
-    
+    int         wave=0;
+    void        *queryPtr=NULL;
+    wxString    query="", response="";
+    BOOL        respOk=FALSE, gotFullWF=FALSE;
+    wxString    matlabStr="", csvStr="", str="", preStr="";
+    double      x_offset=0, y_offset=0, delta_x=0, delta_y=0;
+    long        wavlen=0, idx;
+    unsigned char wbyte=0;
+
     // need to be connected first
     if ( FALSE==bFlukeDetected ) {
         statusBar->SetStatusText("waveforms: no ScopeMeter detected",0);
         return;
     }
 
-    // get the query string (written in ResetModeldependendGUI())
+    // -- get the query string (written in ResetModeldependendGUI())
+    
     wave = comboWaveforms->GetSelection();
     if ( wave<0 ) return;
     queryPtr = comboWaveforms->GetClientData(wave);
@@ -1175,7 +1177,8 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
     GUI_Down(); 
     wxBusyCursor wait; // displays hourglass, reverts back to normal automatically 
     
-    // execute the query, data is in binary (not ASCII)
+    // -- execute the query, data is in binary (not ASCII)
+    
     gotFullWF = FALSE;
     response = QueryFluke(query,FALSE,1000,&respOk); // <ack><cr>
     if ( !respOk ) {
@@ -1193,11 +1196,139 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
         } else {        
             statusBar->SetStatusText("waveforms: got waveform",0);
             txtSerialTrace->AppendText("Waveform data:" + response + "\r\n");        
-            // TODO: decode waveform data
             gotFullWF = TRUE;            
         }
     }
     
+    // -- decode the waveform data into Matlab and CSV format (e.g. Excel importing)
+    
+    csvStr = ""; matlabStr = ""; preStr = "";
+    idx = 0;
+    
+    if ( gotFullWF ) {
+        
+        wxStringTokenizer tkz(response, ",");
+        if ( tkz.CountTokens()<10 ) {
+            txtSerialTrace->AppendText("Waveform: SM response too short! Decoding anyway...\r\n");
+        }
+        
+        switch(mScopemeterType) {
+        case SCOPEMETER_190_SERIES:
+        case SCOPEMETER_120_SERIES:
+            // TODO: add decoding
+            break;
+            
+        case SCOPEMETER_90_SERIES:
+        case SCOPEMETER_97_SERIES:
+            // A guess at the response format (undocumented?):
+            // <description string>,<y axis unit e.g. Vols>,<x axis unit>,
+            // <x offset value>,<y offset value>,<delta x>,<delta y>,
+            // <ydivs (255)>,<xdivs>,
+            // <binary data as 'xdivs' nr of bytes><one checksum(?) byte>
+            str = tkz.GetNextToken(); idx += str.Length() + 1;
+                csvStr = str + "\r\n";
+                matlabStr = "title('"+str+"'), ";
+            str = tkz.GetNextToken(); idx += str.Length() + 1;
+                csvStr += str + ";";
+                matlabStr += "ylabel('"+str+"'), ";
+            str = tkz.GetNextToken(); idx += str.Length() + 1;
+                csvStr += str + ";";
+                matlabStr += "xlabel('"+str+"');\r\n";
+            str = tkz.GetNextToken(); idx += str.Length() + 1;
+                // if str=>float conversion successful, change string
+                if(str.ToDouble(&x_offset)) { str = wxString::Format("%f",x_offset); }
+                else { x_offset=0; } // conversion error, use 0 in calcs
+                csvStr += "x offset:;" + str + ";";
+                preStr += "xoffset="+str+", ";
+            str = tkz.GetNextToken(); idx += str.Length() + 1;
+                if(str.ToDouble(&y_offset)) { str = wxString::Format("%f",y_offset); }
+                else { y_offset=0; }
+                csvStr += "y offset:;" + str + ";";
+                preStr += "yoffset="+str+", ";
+            str = tkz.GetNextToken(); idx += str.Length() + 1;
+                if(str.ToDouble(&delta_x)) { str = wxString::Format("%f",delta_x); }
+                else { delta_x=1; }
+                csvStr += "delta x:;" + str + ";";
+                preStr += "deltax="+str+", ";
+            str = tkz.GetNextToken(); idx += str.Length() + 1;
+                if(str.ToDouble(&delta_y)) { str = wxString::Format("%f",delta_y); }
+                else { delta_y=1; }
+                csvStr += "delta y:;" + str + "\r\n";
+                preStr += "deltay="+str+";\r\n";
+            str = tkz.GetNextToken(); // ydivs (always 255?)
+            idx += str.Length() + 1;
+            str = tkz.GetNextToken(); // xdivs = nr of wave bytes
+            idx += str.Length() + 1;
+            if (!str.ToLong(&wavlen, 10)) {
+                str = response.Mid(idx, wxSTRING_MAXLEN); // actual data + chksum
+                wavlen = str.Length()-1;                  // (don't include chksum)
+            } else {
+                str = response.Mid(idx, wavlen);          // actual data, no chksum
+                if ( wavlen!=(long)(str.Length()) ) {
+                    txtSerialTrace->AppendText(
+                        wxString::Format("Waveform: waveform data length mismatch! ("
+                                         "should be %ld, but got %d)\r\n",
+                                         wavlen, str.Length()));
+                }
+            }
+
+            preStr += "x = xoffset:deltax:(xoffset+deltax*";
+            preStr += wxString::Format("%d);\r\n",(int)(wavlen-1));
+            preStr += "y = [ ";
+            for ( long i=0; i<wavlen && i<(long)(str.Length()); ++i ) {
+                wbyte = (unsigned char)str.GetChar(i);
+                csvStr += wxString::Format("%f;%f\r\n",
+                               ((double)wbyte-0x80)*delta_y+y_offset, // Y
+                               i*delta_x+x_offset      // X
+                               );
+                preStr += wxString::Format("%f ", ((double)wbyte-0x80)*delta_y+y_offset);
+            }
+            preStr += " ]; \r\n";
+            preStr += "figure(1), plot(x,y), ";
+            preStr += wxString::Format("axis([%f %f %f %f]), ",
+                        x_offset, x_offset+delta_x*(wavlen-1),
+                        y_offset-((float)0x80)*delta_y, y_offset+((float)0x80)*delta_y);
+            matlabStr = preStr + matlabStr;
+            break;
+        }
+        
+        // -- store the Matlab code snippet in the textbox and on the clipboard
+        txtWavestring->SetValue(matlabStr);
+        if( TRUE==wxTheClipboard->Open() ) {
+            wxTheClipboard->SetData ( new wxTextDataObject(matlabStr) );
+            wxTheClipboard->Flush();
+            wxTheClipboard->Close();
+            statusBar->SetStatusText("waveforms: got waveform - Matlab code on clipboard",0);
+        }
+
+        // -- save a .CSV file
+        if ( strPrevSavePath.Length()<1 ) {
+            strPrevSavePath = wxGetCwd(); // default to current directory
+        }
+        // select a new file
+        wxFileDialog* saveDialog = new wxFileDialog (
+            (wxWindow *)this, "Save waveform data to CSV text file",
+            strPrevSavePath, "", "Character Separated Values file (*.csv)|*.csv",
+            wxSAVE|wxOVERWRITE_PROMPT
+        );
+        if ( wxID_CANCEL==saveDialog->ShowModal() ) { return; }
+        str = saveDialog->GetPath();
+        saveDialog->Destroy();
+        // write string to file
+        wxFile *outfile = new wxFile(str.c_str(), wxFile::write);
+        if ( (NULL!=outfile) && (TRUE==outfile->IsOpened()) ) {
+            if ( outfile->Write(csvStr) < csvStr.Length() ) {
+                txtSerialTrace->AppendText("Waveform: could not write all data to CSV file...\r\n");
+            } else {
+                statusBar->SetStatusText("waveforms: Matlab code on clipboard, data in CSV file",0);
+            }
+            outfile->Close();
+        }
+        // store the path name for the next Save File dialog
+        strPrevSavePath = str.BeforeLast('\\');
+        
+    }
+
     GUI_Up();
     
     return;    

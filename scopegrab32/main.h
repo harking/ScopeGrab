@@ -32,6 +32,7 @@
 #include <wx/clipbrd.h>
 #include <wx/event.h>
 #include <wx/thread.h>
+#include <wx/tokenzr.h>
 
 // ---- other headers ----
 
