@@ -101,6 +101,8 @@
 
 #include "main.h"
 
+#define SG32_VERSION_STR    "ScopeGrab32 v2.1 alpha"
+
 // instantiate the wxWidgets application MyAp (similar to WinMain())
 IMPLEMENT_APP(MyApp)
 
@@ -251,6 +253,7 @@ void MyFrame::initBefore()
     RxErrorCounter = 0;
     RxTotalBytecount = 0;
     mScopemeterType = SCOPEMETER_NONE;
+    strScopemeterID = "";
 }
 
 
@@ -592,6 +595,7 @@ void MyFrame::ChangeComPort()
 
         if(response.Freq(';')>1) {
             bFlukeDetected = TRUE;
+            strScopemeterID = response;
             // show ID in text label
             stFlukeID->SetLabel(response.BeforeFirst(';'));
             // ... and in the status bar
@@ -1157,6 +1161,7 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
     BOOL        respOk=FALSE, gotFullWF=FALSE;
     wxString    matlabStr="", csvStr="", str="", preStr="";
     double      x_offset=0, y_offset=0, delta_x=0, delta_y=0;
+    wxString    strXUnit="", strYUnit="";
     long        wavlen=0, idx;
     unsigned char wbyte=0;
 
@@ -1222,43 +1227,47 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
         case SCOPEMETER_97_SERIES:
             // A guess at the response format (undocumented?):
             // <description string>,<y axis unit e.g. Vols>,<x axis unit>,
-            // <x offset value>,<y offset value>,<delta x>,<delta y>,
-            // <ydivs (255)>,<xdivs>,
+            // <y offset value>,<x offset value>,<delta y>,<delta x>,
+            // <ydivs (255 for 8-bit scopemeters)>,<xdivs>,
             // <binary data as 'xdivs' nr of bytes><one checksum(?) byte>
+            // -- decode the data descriptors
             str = tkz.GetNextToken(); idx += str.Length() + 1;
-                csvStr = str + "\r\n";
-                matlabStr = "title('"+str+"'), ";
+                csvStr = str + "\r\n\r\n";
+                matlabStr = "title('" + str + "'), ";
             str = tkz.GetNextToken(); idx += str.Length() + 1;
-                csvStr += str + ";";
-                matlabStr += "ylabel('"+str+"'), ";
+                matlabStr += "ylabel('" + str + "'), ";
+                strYUnit = str;
             str = tkz.GetNextToken(); idx += str.Length() + 1;
-                csvStr += str + ";";
-                matlabStr += "xlabel('"+str+"');\r\n";
+                matlabStr += "xlabel('" + str + "');\r\n";
+                strXUnit = str;
             str = tkz.GetNextToken(); idx += str.Length() + 1;
                 // if str=>float conversion successful, change string
-                if(str.ToDouble(&x_offset)) { str = wxString::Format("%f",x_offset); }
-                else { x_offset=0; } // conversion error, use 0 in calcs
-                csvStr += "x offset:;" + str + ";";
-                preStr += "xoffset="+str+", ";
-            str = tkz.GetNextToken(); idx += str.Length() + 1;
                 if(str.ToDouble(&y_offset)) { str = wxString::Format("%f",y_offset); }
-                else { y_offset=0; }
-                csvStr += "y offset:;" + str + ";";
-                preStr += "yoffset="+str+", ";
+                else { y_offset=0; } // conversion error, use 0 in calcs
+                csvStr += strYUnit + " offset:;" + str + ";";
+                preStr += "yoffset=" + str + ", ";
             str = tkz.GetNextToken(); idx += str.Length() + 1;
-                if(str.ToDouble(&delta_x)) { str = wxString::Format("%f",delta_x); }
-                else { delta_x=1; }
-                csvStr += "delta x:;" + str + ";";
-                preStr += "deltax="+str+", ";
+                if(str.ToDouble(&x_offset)) { str = wxString::Format("%f",x_offset); }
+                else { x_offset=0; }
+                csvStr += strXUnit + " offset:;" + str + ";";
+                preStr += "xoffset=" + str + ", ";
             str = tkz.GetNextToken(); idx += str.Length() + 1;
                 if(str.ToDouble(&delta_y)) { str = wxString::Format("%f",delta_y); }
                 else { delta_y=1; }
-                csvStr += "delta y:;" + str + "\r\n";
-                preStr += "deltay="+str+";\r\n";
+                csvStr += "\r\n";
+                csvStr += "delta " + strYUnit + ":;" + str + ";";
+                preStr += "deltay=" + str + ", ";
+            str = tkz.GetNextToken(); idx += str.Length() + 1;
+                if(str.ToDouble(&delta_x)) { str = wxString::Format("%f",delta_x); }
+                else { delta_x=1; }
+                csvStr += "delta " + strXUnit + ":;" + str + "\r\n";
+                preStr += "deltax=" + str + ";\r\n";
             str = tkz.GetNextToken(); // ydivs (always 255?)
-            idx += str.Length() + 1;
+                csvStr += strYUnit + " divs:;" + str + ";";
+                idx += str.Length() + 1;
             str = tkz.GetNextToken(); // xdivs = nr of wave bytes
-            idx += str.Length() + 1;
+                csvStr += strXUnit + " divs:;" + str + "\r\n";
+                idx += str.Length() + 1;
             if (!str.ToLong(&wavlen, 10)) {
                 str = response.Mid(idx, wxSTRING_MAXLEN); // actual data + chksum
                 wavlen = str.Length()-1;                  // (don't include chksum)
@@ -1272,17 +1281,27 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
                 }
             }
 
+            // -- decode data and prepare CSV file and matlab vectors
+            // csv data 
+            csvStr += wxString::Format("\r\n"+strYUnit+" range;min:;%f;max:;%f\r\n",
+                y_offset-((float)0x80)*delta_y, y_offset+((float)0x80)*delta_y);
+            csvStr += wxString::Format(strXUnit+" range;min:;%f;max:;%f\r\n",
+                x_offset, x_offset+delta_x*(wavlen-1));
+            csvStr += "\r\n" + strXUnit + ";" + strYUnit + "\r\n";
+            // matlab x vector
             preStr += "x = xoffset:deltax:(xoffset+deltax*";
             preStr += wxString::Format("%d);\r\n",(int)(wavlen-1));
             preStr += "y = [ ";
             for ( long i=0; i<wavlen && i<(long)(str.Length()); ++i ) {
                 wbyte = (unsigned char)str.GetChar(i);
+                // csv
                 csvStr += wxString::Format("%f;%f\r\n",
-                               ((double)wbyte-0x80)*delta_y+y_offset, // Y
-                               i*delta_x+x_offset      // X
-                               );
+                               i*delta_x+x_offset,     // X
+                               ((double)wbyte-0x80)*delta_y+y_offset ); // Y
+                // matlab vector
                 preStr += wxString::Format("%f ", ((double)wbyte-0x80)*delta_y+y_offset);
             }
+            // matlab
             preStr += " ]; \r\n";
             preStr += "figure(1), plot(x,y), ";
             preStr += wxString::Format("axis([%f %f %f %f]), ",
@@ -1314,12 +1333,22 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
         if ( wxID_CANCEL==saveDialog->ShowModal() ) { return; }
         str = saveDialog->GetPath();
         saveDialog->Destroy();
-        // write string to file
+        // write info and waveform string to CSV file
         wxFile *outfile = new wxFile(str.c_str(), wxFile::write);
         if ( (NULL!=outfile) && (TRUE==outfile->IsOpened()) ) {
-            if ( outfile->Write(csvStr) < csvStr.Length() ) {
-                txtSerialTrace->AppendText("Waveform: could not write all data to CSV file...\r\n");
+            wxDateTime now = wxDateTime::Now();
+            wxString modelStr = this->strScopemeterID;
+            modelStr.Replace(";"," ",TRUE);
+            wxString infoStr = "## Fluke scopemeter waveform capture - generated with "
+                + wxString(SG32_VERSION_STR) + "\r\n"
+                + "## wave downloaded " + now.FormatISODate() + " " + now.FormatISOTime() + "\r\n"
+                + "## SM model: " +  modelStr + "\r\n"
+                + "## data in decimal notation (use find/replace . to , if necessary)\r\n"
+                + "\r\n";
+            if ( !outfile->Write(infoStr) || !outfile->Write(csvStr) ) {
+                txtSerialTrace->AppendText("Waveform: could not write data to CSV file!\r\n");
             } else {
+                txtSerialTrace->AppendText("Waveform: stored to CSV file\r\n");
                 statusBar->SetStatusText("waveforms: Matlab code on clipboard, data in CSV file",0);
             }
             outfile->Close();
@@ -1339,7 +1368,7 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
 //
 void MyFrame::OnMenuAbout(wxMenuEvent& event)
 {
-    wxMessageBox("ScopeGrab32 v2.1 alpha\r\n\rAn open source tool for communicating\r\n"
+    wxMessageBox(wxString(SG32_VERSION_STR)+"\r\n\rAn open source tool for communicating\r\n"
         "with a Fluke Scopemeter and also do a\r\nscreen capture.\r\n\r\n"
         "Supported models: 190 and 190C series\r\n\r\n"
         "Alpha 'support': 123,124,91,92,96 and 97,99\r\n\r\n"

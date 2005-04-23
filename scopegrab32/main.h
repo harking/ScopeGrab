@@ -33,6 +33,7 @@
 #include <wx/event.h>
 #include <wx/thread.h>
 #include <wx/tokenzr.h>
+#include <wx/datetime.h>
 
 // ---- other headers ----
 
@@ -194,6 +195,7 @@ private:
     wxString       strPostscript;      // postscript version of the image
     wxString       strPrevSavePath;    // previous path used when saving file
     int            mScopemeterType;    // detected scopemeter, default: SCOPEMETER_NONE
+    wxString       strScopemeterID;    // the ID string returned by the SM
     BOOL           bFlukeDetected;
 
     
