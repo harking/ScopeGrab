@@ -165,6 +165,78 @@ wxString fluke190wfNames[FLUKE190_WF_QUERY_NUM] = {
         "Channel B env (190C)", "Channel B ref (190C)",
         "Channel maths"        
     };
+    
+#define FLUKE190_WF_UNITSCOUNT  22
+wxString fluke190wfUnits[FLUKE190_WF_UNITSCOUNT] = {
+        " ", "V", "A", "Ohm", "W", "F", "K", "s",
+        "h", "d", "Hz", "deg", "degC", "degF", "%", "dBm 50 Ohm",
+        "dBm 600 Ohm", "dB V", "dB A", "dB W", "VAR", "VA"
+    };
+
+struct _fluke190wfTraceAdmin {
+    unsigned char sfd1;    // '#'
+    unsigned char sfd2;    // '0'
+    unsigned char block_header;     // 144=header only, 0=header and samples
+    unsigned int  block_length;
+    union _trace_result {
+        unsigned char byte;
+        struct _bit {
+            bool isTraceAq  : 1;
+            bool isTrend    : 1;
+            bool isEnvelope : 1;
+            bool isReference: 1;
+            bool isMaths    : 1;
+        } bit;
+    } trace_result;
+    unsigned char y_unit;
+    unsigned char x_unit;
+    unsigned int  y_divisions;
+    unsigned int  x_divisions;
+    float         y_scale;
+    float         x_scale;
+    unsigned char y_step;
+    unsigned char x_step;
+    float         y_zero;
+    float         x_zero;
+    float         y_resolution;
+    float         x_resolution;
+    float         y_at_0;
+    float         x_at_0;
+    char          date_stamp[8]; // date: yyyymmdd, string not 0-terminated
+    char          time_stamp[6]; // time: hhmmss, string not 0-terminated
+    unsigned char checksum;
+};
+struct _fluke190wfTraceSamples {
+    unsigned char sfd1;    // '#'
+    unsigned char sfd2;    // '0'
+    unsigned char block_header;     // always 129
+    unsigned long block_length;
+    union _sample_format {
+        unsigned char byte;
+        struct _bit {
+            unsigned char samp_octetlenth : 3; // how many octets one sample_value consists of
+            bool dummy : 1;
+            unsigned char samp_compination : 3; // cf PDF reference
+            bool samp_isSigned : 1;
+        } bit;
+    } sample_format;
+    // (remainder of data must be decoded manually, depends on samp_octetlenth etc)
+
+    // for filling out manually:
+    long    overload;
+    long    underload;
+    long    invalid;
+    unsigned int num_of_samples;
+    union _samples {
+        long * ldata;
+        unsigned long * uldata;
+        int * idata;
+        unsigned int * uidata;
+        char * bdata;
+        unsigned char * ubdata;
+    } samples;
+    unsigned char checksum;
+};
 
 // ----------------------------------------------------
 // -------------     HELPER FUNCTIONS     -------------
@@ -964,8 +1036,8 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
             // truncate response buffer string
             response = response.Mid(escIndex+1+LEN_STR_GRFXSTART+2+data_len, wxSTRING_MAXLEN);
             //response.Shrink();
-            rxbytesremaining -= LEN_STR_GRFXSTART+2+data_len; // data block
             rxbytesremaining -= escIndex+1; // stuff before data block
+            rxbytesremaining -= LEN_STR_GRFXSTART+2+data_len; // head and data block
             if ( rxbytesremaining<0 ) {
                 txtSerialTrace->AppendText("Warning: received more graphics bytes than expected...\r\n");
                 rxbytesremaining = 0;
@@ -1164,6 +1236,7 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
     wxString    strXUnit="", strYUnit="";
     long        wavlen=0, idx;
     unsigned char wbyte=0;
+    struct      _fluke190wfTraceAdmin* ptrTraceAdmin = NULL;
 
     // need to be connected first
     if ( FALSE==bFlukeDetected ) {
@@ -1216,11 +1289,33 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
         if ( tkz.CountTokens()<10 ) {
             txtSerialTrace->AppendText("Waveform: SM response too short! Decoding anyway...\r\n");
         }
-        
+
         switch(mScopemeterType) {
         case SCOPEMETER_190_SERIES:
         case SCOPEMETER_120_SERIES:
-            // TODO: add decoding
+            // Response format (at least for the 190 series):
+            // <trace_admin>,<trace_samples>
+            //   where
+            // <trace_admin> = #0<block_header><block_length><trace_result>
+            //                 <y_unit><x_unit><y_divisions><x_divisions>
+            //                 <y_scale><x_scale><y-step><x_step><y_zero>
+            //                 <x_zero><y_resolution><x_resolution><y_at_0>
+            //                 <x_at_0><date_stamp><time_stamp><check_sum>
+            // <trace_samples>= #0<block_header><block_length><sample_format>
+            //                 <overload><underload><invalid><nbr_of_samples>
+            //                 <samples><check_sum><cr>
+            if ( response.Length()<sizeof(_fluke190wfTraceAdmin) ) {
+                txtSerialTrace->AppendText("Waveform: the response was too short, no valid data!\r\n");
+                break;
+            }
+            ptrTraceAdmin = (_fluke190wfTraceAdmin*)response.GetData();
+            if ( NULL==ptrTraceAdmin ) {
+                txtSerialTrace->AppendText("Waveform: invalid string data pointer (NULL)\r\n");
+                break;
+            }
+            // TODO: decode!
+            // ptrTraceAdmin->block_length ...
+            
             break;
             
         case SCOPEMETER_90_SERIES:
@@ -1330,31 +1425,32 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
             strPrevSavePath, "", "Character Separated Values file (*.csv)|*.csv",
             wxSAVE|wxOVERWRITE_PROMPT
         );
-        if ( wxID_CANCEL==saveDialog->ShowModal() ) { return; }
-        str = saveDialog->GetPath();
-        saveDialog->Destroy();
-        // write info and waveform string to CSV file
-        wxFile *outfile = new wxFile(str.c_str(), wxFile::write);
-        if ( (NULL!=outfile) && (TRUE==outfile->IsOpened()) ) {
-            wxDateTime now = wxDateTime::Now();
-            wxString modelStr = this->strScopemeterID;
-            modelStr.Replace(";"," ",TRUE);
-            wxString infoStr = "## Fluke scopemeter waveform capture - generated with "
-                + wxString(SG32_VERSION_STR) + "\r\n"
-                + "## wave downloaded " + now.FormatISODate() + " " + now.FormatISOTime() + "\r\n"
-                + "## SM model: " +  modelStr + "\r\n"
-                + "## data in decimal notation (use find/replace . to , if necessary)\r\n"
-                + "\r\n";
-            if ( !outfile->Write(infoStr) || !outfile->Write(csvStr) ) {
-                txtSerialTrace->AppendText("Waveform: could not write data to CSV file!\r\n");
-            } else {
-                txtSerialTrace->AppendText("Waveform: stored to CSV file\r\n");
-                statusBar->SetStatusText("waveforms: Matlab code on clipboard, data in CSV file",0);
+        if ( wxID_CANCEL!=saveDialog->ShowModal() ) { 
+            str = saveDialog->GetPath();
+            // write info and waveform string to CSV file
+            wxFile *outfile = new wxFile(str.c_str(), wxFile::write);
+            if ( (NULL!=outfile) && (TRUE==outfile->IsOpened()) ) {
+                wxDateTime now = wxDateTime::Now();
+                wxString modelStr = this->strScopemeterID;
+                modelStr.Replace(";"," ",TRUE);
+                wxString infoStr = "## Fluke scopemeter waveform capture - generated with "
+                    + wxString(SG32_VERSION_STR) + "\r\n"
+                    + "## wave downloaded " + now.FormatISODate() + " " + now.FormatISOTime() + "\r\n"
+                    + "## SM model: " +  modelStr + "\r\n"
+                    + "## data in decimal notation (use find/replace . to , if necessary)\r\n"
+                    + "\r\n";
+                if ( !outfile->Write(infoStr) || !outfile->Write(csvStr) ) {
+                    txtSerialTrace->AppendText("Waveform: could not write data to CSV file!\r\n");
+                } else {
+                    txtSerialTrace->AppendText("Waveform: stored to CSV file\r\n");
+                    statusBar->SetStatusText("waveforms: Matlab code on clipboard, data in CSV file",0);
+                }
+                outfile->Close();
             }
-            outfile->Close();
+            // store the path name for the next Save File dialog
+            strPrevSavePath = str.BeforeLast('\\');
         }
-        // store the path name for the next Save File dialog
-        strPrevSavePath = str.BeforeLast('\\');
+        saveDialog->Destroy();
         
     }
 
