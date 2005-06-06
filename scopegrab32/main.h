@@ -57,6 +57,7 @@
 #define ID_RTSTIMER             13
 #define ID_TXTCTL_CONSOLECMD    14
 #define ID_BTN_WAVE             15
+#define ID_TASKTIMER            16
 
 #define WINDOW_WIDTH            655
 #define WINDOW_HEIGHT           665
@@ -68,6 +69,11 @@
 #define EPSONSCREEN_WIDTH       240*EPSONSCREEN_SCALEFACTOR
 #define EPSONSCREEN_HEIGHT      240*EPSONSCREEN_SCALEFACTOR
 #define IMAGE_BITDEPTH          1
+
+#define POSTTASK_NONE           0
+#define POSTTASK_INITCONFIGS    1
+#define POSTTASK_RECONNECT      2
+
 
 // ---- main prog defs and vars ----
 
@@ -150,8 +156,9 @@ private:
     void        evtSaveImage(wxCommandEvent& event);
     void        evtSavePostscript(wxCommandEvent& event);
     void        evtGetWaveform(wxCommandEvent& event);
-    // timer event, toggles the RTS pin to generate negative rail
-    void        evtRtsTimer(wxTimerEvent& event);
+    // timer events
+    void        evtRtsTimer(wxTimerEvent& event);  // toggles the RTS pin to generate negative rail
+    void        evtTaskTimer(wxTimerEvent& event); // executes tasks after window creation
     // key press
     void        evtKeyDown(wxKeyEvent& event);
 
@@ -214,7 +221,10 @@ private:
     
     // -- program config file
     wxConfig*      mConfigs;                // for storing/loading user selections
-    
+
+    wxTimer*       tmrPostTasks;            // for scheduling tasks after window startup
+    int            posttask;                // type of -"- task
+        
     // -- event table
     // see start of main.cpp for the event mappings
     DECLARE_EVENT_TABLE()

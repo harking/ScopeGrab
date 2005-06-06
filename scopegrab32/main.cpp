@@ -128,6 +128,7 @@ BEGIN_EVENT_TABLE(MyFrame,wxFrame)
     EVT_BUTTON(ID_BTN_WAVE, MyFrame::evtGetWaveform)
     
     EVT_TIMER(ID_RTSTIMER, MyFrame::evtRtsTimer)
+    EVT_TIMER(ID_TASKTIMER, MyFrame::evtTaskTimer)    
     
     EVT_CHAR(MyFrame::evtKeyDown)
     
@@ -261,6 +262,8 @@ void MyFrame::initBefore()
     RxTotalBytecount = 0;
     mScopemeterType = SCOPEMETER_NONE;
     strScopemeterID = "";
+    mySerial = NULL;
+    mConfigs = NULL;
 }
 
 
@@ -273,10 +276,10 @@ void MyFrame::initBefore()
 
 void MyFrame::VwXinit()
 {
-    // create a serial RX/TX class and mutex
+    // create a serial RX/TX class and mutex, and RTS toggler
     mySerial = new CSerial(this);
     tmrToggleRTS = new wxTimer(this, ID_RTSTIMER);
-
+    
     // -- add GUI components
 
     Show(false);
@@ -432,24 +435,48 @@ void MyFrame::VwXinit()
             wxString::Format("%d", fluke_baudrates[i]), &fluke_baudrates[i]
         );
     }
-  
-    // create config file object
+
+    // schedule config loader after window is visible
     this->mConfigs = new wxConfig("ScopeGrab32");
-    if(this->mConfigs!=NULL) {
-        mConfigs->SetPath(wxGetCwd());    
-        mConfigs->SetRecordDefaults(TRUE);
-        // get and apply previous settings now (defaults: 0=COM1, 0=1200baud)
-        comboCOM->SetSelection(mConfigs->Read("ComPort",0L));
-        comboBaud->SetSelection(mConfigs->Read("UseBaud",0L));
-        mConfigs->Flush();
-    } else {
-        comboCOM->SetSelection(0);
-        comboBaud->SetSelection(0);        
-    }
-    this->ChangeComPort(); // apply
-      
+    GUI_Down();
+    posttask = POSTTASK_INITCONFIGS;
+    tmrPostTasks = new wxTimer(this, ID_TASKTIMER);
+    tmrPostTasks->Start(1000, TRUE); // 1 second, single shot
+        
     return;
 }
+
+//
+// Task timer event
+//
+void MyFrame::evtTaskTimer(wxTimerEvent& event)
+{
+    switch(this->posttask) {
+        case POSTTASK_NONE:
+            break;
+        // -- after window is visible, load user settings and try
+        //    to connect to the scopemeter
+        case POSTTASK_INITCONFIGS:
+            if(this->mConfigs!=NULL) {
+                mConfigs->SetPath(wxGetCwd());    
+                mConfigs->SetRecordDefaults(TRUE);
+                // get and apply previous user settings now (defaults: 0=COM1, 0=1200baud)
+                comboCOM->SetSelection(mConfigs->Read("ComPort",0L));
+                comboBaud->SetSelection(mConfigs->Read("UseBaud",0L));
+                mConfigs->Flush();
+            } else {
+                comboCOM->SetSelection(0);
+                comboBaud->SetSelection(0);        
+            }
+            this->ChangeComPort(); // apply
+            GUI_Up();
+            break;
+        default:
+            break;
+    }
+    return;
+}
+
 
 
 //
@@ -568,6 +595,7 @@ void MyFrame::ChangeComPort()
 {
     BOOL ret;
     BOOL respOk;
+    wxString response;
     int  idx, port, baud, user_baud, prev_baud;
 
     // starting baud rate (1200 or previous user baud rate)
@@ -611,10 +639,13 @@ void MyFrame::ChangeComPort()
             // port open failed
             statusBar->SetStatusText(wxString::Format("COM%d @ %d baud",port, baud),0);
             statusBar->SetStatusText(wxString::Format("system error 0x%04lX",mySerial->getLastError()),1);
+            txtSerialTrace->AppendText(wxString::Format("Port open: system error 0x%04lX\r\n",mySerial->getLastError()));
             break;  
         } 
 
+        txtSerialTrace->AppendText(wxString::Format("PC set to %d baud\r\n", baud));
         statusBar->SetStatusText(wxString::Format("COM%d @ %d baud", port, baud),0);
+        statusBar->SetStatusText("checking...",1);
 
         // init circuit supply voltage 'generator'
         tmrToggleRTS->Start(TIMER_TOGGLERATE, FALSE); // given rate, not single-shot
@@ -622,8 +653,10 @@ void MyFrame::ChangeComPort()
         SleepEx(400,FALSE);
         DoEvents();
 
+        response = QueryFluke("  ",TRUE,1000,&respOk); // send a few cr/lf's
+
         // try to get identification from the Fluke : <acknowledge><cr><infos><cr>
-        wxString response = QueryFluke("ID",TRUE,1000,&respOk); // just the <ack>
+        response = QueryFluke("ID",TRUE,1000,&respOk); // just the <ack>
         if(TRUE==respOk) {
             response = GetFlukeResponse(250); // <infos> string
         }
@@ -704,6 +737,7 @@ void MyFrame::ChangeComPort()
                 break;
             } else {
                 txtSerialTrace->AppendText(wxString::Format("Fluke didn't ACK baud rate change. Staying at %d.\r\n",prev_baud));
+                response = QueryFluke("  ",TRUE,1000,&respOk); // send a few cr/lf's in case of errors
                 break;
             }
             
@@ -763,10 +797,13 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
     long rxbytesremaining = 0;
     unsigned char currbyte = 0;
     unsigned int y_counter = 0, x_counter = 0;
-    unsigned int bitnr = 0, bitval = 0;
+    unsigned int bitval = 0;
+    signed int bitnr = 0;
     BYTE color = 0;
     wxBitmap* bmpTempBitmap = NULL;
     unsigned int GraphicsFormat = GFXFORMAT_NONE;
+    wxString oldSBstr;
+    unsigned int idx;
 
     if ( FALSE==bFlukeDetected ) {
         statusBar->SetStatusText("screenshot: no ScopeMeter detected",1);
@@ -813,13 +850,14 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
         //
         // Receive postscript data in ASCII mode
         //
+        oldSBstr = statusBar->GetStatusText(0);
         this->strPostscript = "";
         response = QueryFluke(command,TRUE,1000,&respOk); // first just the <ack>
         while ( (response.Length()>0) && (TRUE==respOk) ) {
 
             // get next line
             response = GetFlukeResponse(1000); // <printer or image data><cr>
-            DoEvents();
+            if(response.Length()<=0) break;
             
             // interrupt if user wants
             if ( TRUE==this->bEscKey ) {
@@ -839,6 +877,7 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
             if ( FALSE==imageStart ) {
                 if ( response.Find("image") >= 0 ) {
                     imageStart = TRUE;
+                    if(imgScreenshot!=NULL) { delete imgScreenshot; }                    
                     imgScreenshot=new wxImage(FLUKESCREEN_WIDTH,FLUKESCREEN_HEIGHT);
                     this->imgScreenshot->Create(FLUKESCREEN_WIDTH,FLUKESCREEN_HEIGHT);
                     this->imgScreenshot->SetMask(FALSE);
@@ -848,6 +887,8 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
                 continue;
             }
 
+            statusBar->SetStatusText(wxString::Format("%ld bytes",(long)strPostscript.Length()),0);
+
             // a line with "showpage" indicates the end of the image data
             if ( response.Find("showpage") >= 0 ) {
                 gotImage = TRUE;
@@ -856,11 +897,13 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
 
             // process the current line, all upper case HEX data strings
             response = response.MakeUpper();
-            for ( unsigned int idx=0; idx<response.Length(); ++idx ) {
+
+            for ( idx=0; idx<response.Length(); ++idx ) {
                 // check hex format
                 currbyte = response.GetChar(idx);
                 if ( !(currbyte>='0' && currbyte<='9') &&
-                     !(currbyte>='A' && currbyte<='F') ) { continue; }
+                     !(currbyte>='A' && currbyte<='F') )      
+                { continue; }
                 // hex to dec
                 if(currbyte>='0' && currbyte<='9') { currbyte -= '0'; }
                 else { currbyte = 10+(currbyte-'A'); }
@@ -868,8 +911,7 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
                 bitval=0x08;
                 for ( bitnr=3; bitnr>=0; --bitnr, bitval/=2 ) {
                     color = 0xFF;
-                    if ( 0==(currbyte&bitval) )
-                        { color = 0x00; } // bit cleared: black
+                    if ( 0==(currbyte&bitval) ) { color = 0x00; } // bit cleared: black
                     this->imgScreenshot->SetRGB(x_counter, y_counter, color, color, color);
                     ++x_counter;
                 }
@@ -881,13 +923,15 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
                 x_counter = 0;
                 ++y_counter;
             }
+
             if ( NULL!=bmpTempBitmap ) { delete bmpTempBitmap; }
             bmpTempBitmap = new wxBitmap(imgScreenshot,IMAGE_BITDEPTH);
             sbmpScreenshot->SetBitmap(*bmpTempBitmap);
-            sbmpScreenshot->Refresh(false, NULL);
+
         }
         // done receiving postscript image
         if ( TRUE==imageStart ) { bGotScreenshot = TRUE; }
+        statusBar->SetStatusText(oldSBstr,0);
         
     } else if ( GFXFORMAT_EPSONESC==GraphicsFormat ) {
         //
@@ -960,6 +1004,7 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
                     if ( TRUE==lenStr.ToLong(&ltmp,10) ) {
                         rxbytesremaining = ltmp + 1; // fluke sends x+1 bytes...
                         txtSerialTrace->AppendText("Epson ESC byte count string: '"+lenStr+"'\r\n");
+                        if(imgScreenshot!=NULL) { delete imgScreenshot; }
                         imgScreenshot=new wxImage(EPSONSCREEN_WIDTH,EPSONSCREEN_HEIGHT);
                         this->imgScreenshot->Create(EPSONSCREEN_WIDTH,EPSONSCREEN_HEIGHT);
                         this->imgScreenshot->SetMask(FALSE);
