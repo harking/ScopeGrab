@@ -862,6 +862,9 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
             // interrupt if user wants
             if ( TRUE==this->bEscKey ) {
                 statusBar->SetStatusText("screenshot: user cancelled (ESC)",1);                
+                wxMessageBox("Postscript download cancelled.\r\nPlease switch off your "
+                             "ScopeMeter first, so it stops transmitting data.\r\nThen switch on and reconnect at 1200 baud.",
+                             "User cancelled", wxOK | wxICON_INFORMATION, this);
                 gotImage = FALSE;
                 this->bEscKey = FALSE;
                 break;    
@@ -987,6 +990,9 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
             // -- interrupt now if user wants
             if ( TRUE==this->bEscKey ) {
                 statusBar->SetStatusText("screenshot: user cancelled (ESC)",1);                
+                wxMessageBox("Epson ESC download cancelled.\r\nPlease switch off your "
+                             "ScopeMeter first, so it stops transmitting data.\r\nThen switch on and reconnect at 1200 baud.",
+                             "User cancelled", wxOK | wxICON_INFORMATION, this);
                 gotImage = FALSE;
                 this->bEscKey = FALSE;
                 break;    
