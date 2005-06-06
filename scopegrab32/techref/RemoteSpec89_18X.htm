@@ -1,0 +1,475 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Type"
+content="text/html; charset=iso-8859-1">
+<meta name="Template" content="N:\apps\office97\Office\html.dot">
+<meta name="GENERATOR" content="Microsoft FrontPage Express 2.0">
+<title>Fluke 89 Remote Interface Specification</title>
+</head>
+
+<body bgcolor="#FFFFFF" link="#0000FF" vlink="#800080">
+
+<h1 align="right"><a href="http://www.fluke.com/"><img
+src="FlukeLogo.gif" border="0" width="143" height="49"></a></h1>
+
+<h1>Fluke 189/187/89-IV/87-IV Remote Interface Specification </h1>
+
+<h3 align="right"><a href="../FVFhome.htm">[FlukeView Forms
+Technical Support Home Page]</a> <a href="../FVFhome.htm"><img
+src="fastmed.gif" border="0" width="45" height="45"></a></h3>
+
+<h3 align="right">Technical Note </h3>
+
+<p>Fluke is providing this information to those few customers who
+would like this information. <b>We give this information with the
+understanding that Fluke will not provide any additional support
+on this information</b>. This means that our Product Support
+Service&nbsp;will not be able to answer any questions concerning
+this document. </p>
+
+<hr>
+
+<h3>Introduction </h3>
+
+<p>This document describes some of the serial interface
+capabilities of Fluke model 189, 187, 89-IV, and 87-IV Digital
+Multimeters. </p>
+
+<p>&nbsp;</p>
+
+<h3>Communication Protocol (model 89-IV and 87-IV)</h3>
+
+<p>The Fluke 89-IV and 87-IV have an infrared (IR) serial
+interface that is operated in an RS-232 mode: </p>
+
+<ul>
+    <li>9600 Baud, no parity, 8 bits, 1 stop bit </li>
+</ul>
+
+<p>The IR adapter cable used with the 89-IV and 87-IV gets its
+power from the DTR and RTS signals going into its DB9 connector.
+The PC RS-232 communications port needs to control these two
+signal lines via software, or they can be controlled by wiring in
+an external power source. If you wire in an external power
+source, be sure to break the DTR and RTS signal lines going back
+to the PC. The DB9 connector on the IR adapter cable needs to
+have the following lines with the following voltages applied:</p>
+
+<ul>
+    <li>DTR disabled - pin 4 with -3 to -12 volts (or tied to pin
+        5, Ground, will work also) </li>
+    <li>RTS enabled - pin 7 with +3 to +12 volts </li>
+</ul>
+
+<p>&nbsp;</p>
+
+<h3>Communication Protocol (model 189 and 187)</h3>
+
+<p>The Fluke 189 and 187 have an infrared (IR) serial interface
+different from the model 89-IV and 87-IV. While the IR hardware
+is somewhat different, the serial communications still operates
+with the same RS-232 mode: </p>
+
+<ul>
+    <li>9600 Baud, no parity, 8 bits, 1 stop bit </li>
+</ul>
+
+<p>The IR adapter cable for the Fluke 189 and 187 does not need
+any special control of its signal lines. It can be used just like
+a traditional serial cable.</p>
+
+<p>&nbsp;</p>
+
+<h3>Commands </h3>
+
+<p>Commands consist of 2 letter codes that are sent from a
+computer or other serial device to the meter. </p>
+
+<table border="1" cellpadding="3" cellspacing="1" width="624">
+    <tr>
+        <td width="8%">DS</td>
+        <td width="20%">Default Setup</td>
+        <td width="72%">Equivalent to cycling instrument power.
+        Instrument is returned to its power-up state.</td>
+    </tr>
+    <tr>
+        <td width="8%">ID</td>
+        <td width="20%">Identification</td>
+        <td width="72%">Returns model, serial number, and
+        software version information.</td>
+    </tr>
+    <tr>
+        <td width="8%">RI</td>
+        <td width="20%">Reset Instrument</td>
+        <td width="72%">Resets all instrument registers to
+        factory settings, <em>except</em> calibration constants
+        and 50/60 Hz local factory setting. Clears logging and
+        save memory (applies to 189 and 89-IV only). Resets the
+        real time clock to zero.</td>
+    </tr>
+    <tr>
+        <td width="8%">QM</td>
+        <td width="20%">Query Measurement</td>
+        <td width="72%">Provides measurements that are showing on
+        the meter display. The response string is in ASCII only.</td>
+    </tr>
+    <tr>
+        <td width="8%">SF</td>
+        <td width="20%">Set Function</td>
+        <td width="72%">Allows &quot;button presses&quot; and
+        meter state changes to be done remotely.</td>
+    </tr>
+</table>
+
+<p>See the section on Command Syntax for further detail regarding
+the command set. </p>
+
+<p>&nbsp; </p>
+
+<h3>Command Acknowledge (CMD_ACK) responses </h3>
+
+<p>The meter will acknowledge a command with a single digit
+followed by a carriage return &lt;CR&gt;. Not all syntax errors
+may be detected by the meter. </p>
+
+<p>Here is a list of the possible responses: </p>
+
+<table border="1" cellpadding="2" cellspacing="1" width="435">
+    <tr>
+        <td width="9%">'0'</td>
+        <td width="91%">OK, normal operation, no error.</td>
+    </tr>
+    <tr>
+        <td width="9%">'1'</td>
+        <td width="91%">Syntax error or generic error</td>
+    </tr>
+</table>
+
+<p>&nbsp; </p>
+
+<p>CMD_ACK is followed by a carriage return. With the <strong><i>exception
+of the data response to the ID command</i></strong>, any data
+that is sent out the serial port in response to a command will be
+prefixed with the name of the originating command followed by a
+comma. For example, a response to the QM command would look like:
+</p>
+
+<blockquote>
+    <p>CMD_ACK&lt;CR&gt;QM, measurement string </p>
+</blockquote>
+
+<hr>
+
+<h3>Command Parameters </h3>
+
+<p>Unless otherwise stated, command parameters are ASCII digits
+or letters. </p>
+
+<p>&nbsp;</p>
+
+<h3>Command Syntax </h3>
+
+<table border="1" cellspacing="1" width="100%">
+    <tr>
+        <td width="50"><strong>DS</strong></td>
+        <td width="25%"><strong>Default Setup</strong></td>
+        <td>&nbsp;</td>
+    </tr>
+    <tr>
+        <td width="50">&nbsp;</td>
+        <td valign="top" width="25%">Purpose:</td>
+        <td>Equivalent to cycling instrument power (or pressing
+        the Cancel button). Instrument is returned to a &quot;power-up&quot;
+        state.</td>
+    </tr>
+    <tr>
+        <td>&nbsp;</td>
+        <td width="25%">Command Syntax:</td>
+        <td>DS&lt;CR&gt;</td>
+    </tr>
+    <tr>
+        <td>&nbsp;</td>
+        <td width="25%">Response Syntax:</td>
+        <td>CMD_ACK&lt;CR&gt;</td>
+    </tr>
+    <tr>
+        <td>&nbsp;</td>
+        <td valign="top" width="25%">Remarks:</td>
+        <td>This shouldn't be confused with the Reset Instrument
+        (RI) command. All the DS command does is cause the meter
+        to act like the cancel button was pressed (or that the
+        meter was turned off and back on).</td>
+    </tr>
+</table>
+
+<p>&nbsp; </p>
+
+<table border="1" cellspacing="1" width="100%">
+    <tr>
+        <td width="50"><strong>ID</strong></td>
+        <td width="25%"><strong>Identification</strong></td>
+        <td>&nbsp;</td>
+    </tr>
+    <tr>
+        <td width="50">&nbsp;</td>
+        <td width="25%">Purpose:</td>
+        <td>Returns model, serial number, and software version
+        information.</td>
+    </tr>
+    <tr>
+        <td>&nbsp;</td>
+        <td width="25%">Command Syntax:</td>
+        <td>ID&lt;CR&gt;</td>
+    </tr>
+    <tr>
+        <td>&nbsp;</td>
+        <td width="25%">Response Syntax:</td>
+        <td>CMD_ACK&lt;CR&gt;{identify string}&lt;CR&gt;</td>
+    </tr>
+    <tr>
+        <td>&nbsp;</td>
+        <td valign="top" width="25%">Remarks:</td>
+        <td>{identify string} is in ASCII.<br>
+        Format: Model #, Software version, Serial # <p>The first
+        5 letters of the identity string must be &quot;FLUKE&quot;
+        in uppercase letters.<br>
+        Example: FLUKE 89,V0.39,123456789</p>
+        </td>
+    </tr>
+</table>
+
+<p>&nbsp; &nbsp; </p>
+
+<table border="1" cellspacing="1" width="100%">
+    <tr>
+        <td width="50"><strong>QM</strong></td>
+        <td width="25%"><strong>Query Measurement</strong></td>
+        <td>&nbsp;</td>
+    </tr>
+    <tr>
+        <td width="50">&nbsp;</td>
+        <td width="25%">Purpose:</td>
+        <td><font size="3">Accesses</font><font size="2"> </font><font
+        size="3">the primary display as an ASCII string.</font></td>
+    </tr>
+    <tr>
+        <td>&nbsp;</td>
+        <td width="25%">Command Syntax:</td>
+        <td>QM&lt;CR&gt;</td>
+    </tr>
+    <tr>
+        <td>&nbsp;</td>
+        <td width="25%">Response Syntax:</td>
+        <td>CMD_ACK&lt;CR&gt;QM,{primary_reading}&lt;CR&gt;</td>
+    </tr>
+    <tr>
+        <td>&nbsp;</td>
+        <td valign="top" width="25%">Remarks:</td>
+        <td>This command will return the contents of what is
+        currently on the primary display. There will always be a&nbsp;sign
+        (+/-) <p>Example Output:<br>
+        QM,+47.66 KOhms<br>
+        QM,-121.43 VDC<br>
+        QM,Out&nbsp;of&nbsp;Range mVDC </p>
+        <p><br>
+        &quot;V AC&quot;<br>
+        &quot;mV AC&quot;<br>
+        &quot;V DC&quot;<br>
+        &quot;mV DC&quot;<br>
+        &quot;V AC&quot;, /* V AC&amp;DC*/<br>
+        &quot;mV AC&quot;, /* mV AC&amp;DC*/<br>
+        &quot;V AC+DC &quot;<br>
+        &quot;mV AC+DC&quot;<br>
+        &quot;Ohms&quot;, /* Will have units of blank, k, &amp; M
+        */<br>
+        &quot;nS&quot;, /* Conductance */<br>
+        &quot;Ohms&quot;, /* Continuity */<br>
+        &quot;Farads&quot;, /* Will have units of n, u, &amp; m
+        */<br>
+        &quot;V DC&quot;, /* Diode test */<br>
+        &quot;A AC&quot;<br>
+        &quot;mA AC&quot;<br>
+        &quot;uA AC&quot;<br>
+        &quot;A DC&quot;<br>
+        &quot;mA DC&quot;<br>
+        &quot;uA DC&quot;<br>
+        &quot;A AC&quot;, /* A AC&amp;DC */<br>
+        &quot;mA AC&quot;, /* mA AC&amp;DC */<br>
+        &quot;uA AC&quot;, /* uA AC&amp;DC */<br>
+        &quot;A AC+DC&quot;<br>
+        &quot;mA AC+DC&quot;<br>
+        &quot;uA AC+DC&quot;<br>
+        &quot;Deg C&quot;<br>
+        &quot;Deg F&quot;<br>
+        &quot;dBm&quot;<br>
+        &quot;dBV&quot;<br>
+        &quot;dBm&quot;, /* mV dBm */<br>
+        &quot;dBV&quot;, /* mV dBV */<br>
+        &quot;Hz&quot;</p>
+        <p>&quot;%&quot;, /* Duty */<br>
+        &quot;mS&quot;, /* Pulse */<br>
+        </p>
+        </td>
+    </tr>
+</table>
+
+<p>&nbsp;</p>
+
+<table border="1" cellspacing="1" width="100%">
+    <tr>
+        <td width="8%"><strong>RI</strong></td>
+        <td width="25%"><strong>Reset Instrument</strong></td>
+        <td colspan="4" width="68%">&nbsp;</td>
+    </tr>
+    <tr>
+        <td width="8%">&nbsp;</td>
+        <td width="25%">Purpose:</td>
+        <td colspan="4" width="68%">Resets all instrument
+        registers to factory settings, except calibration
+        constants and communication settings. Clears any data in
+        memory. Sets the day/time tick counter to 0. Does any
+        necessary hardware resets.</td>
+    </tr>
+    <tr>
+        <td width="8%">&nbsp;</td>
+        <td width="25%">Command Syntax:</td>
+        <td colspan="4" width="68%">RI&lt;CR&gt;</td>
+    </tr>
+    <tr>
+        <td width="8%">&nbsp;</td>
+        <td width="25%">Response Syntax:</td>
+        <td colspan="4" width="68%">CMD_ACK&lt;CR&gt;</td>
+    </tr>
+    <tr>
+        <td width="8%">&nbsp;</td>
+        <td width="25%">Remarks:</td>
+        <td colspan="4" width="68%">&nbsp;</td>
+    </tr>
+    <tr>
+        <td width="8%">&nbsp;</td>
+        <td width="25%">&nbsp;</td>
+        <td colspan="4" width="68%">&nbsp;</td>
+    </tr>
+</table>
+
+<p>&nbsp;</p>
+
+<table border="1" cellspacing="1" width="100%">
+    <tr>
+        <td width="8%"><strong>SF</strong></td>
+        <td width="25%"><strong>Set Function</strong></td>
+        <td colspan="4" width="68%">&nbsp;</td>
+    </tr>
+    <tr>
+        <td width="8%">&nbsp;</td>
+        <td width="25%">Purpose:</td>
+        <td colspan="4" width="68%">Allows &quot;button presses&quot;
+        and meter state changes to be done remotely.</td>
+    </tr>
+    <tr>
+        <td width="8%">&nbsp;</td>
+        <td width="25%">Command Syntax:</td>
+        <td colspan="4" width="68%">SF&lt;space&gt;{key
+        code}&lt;CR&gt;</td>
+    </tr>
+    <tr>
+        <td width="8%">&nbsp;</td>
+        <td width="25%">Response Syntax:</td>
+        <td colspan="4" width="68%">CMD_ACK&lt;CR&gt;</td>
+    </tr>
+    <tr>
+        <td rowspan="13" width="8%">&nbsp;</td>
+        <td valign="top" rowspan="13" width="25%">Remarks:</td>
+        <td colspan="4" width="68%">{key code} is a&nbsp;two
+        ASCII digit number. <font size="2" face="Arial">If the
+        {key code} parameter can not be used due to the current
+        mode of the meter, a CMD_ACK of '1' is returned.</font></td>
+    </tr>
+    <tr>
+        <td width="14%">{key code} <p>ASCII digits</p>
+        </td>
+        <td width="17%">Button press</td>
+        <td width="17%">{key code} <p>ASCII digits</p>
+        </td>
+        <td width="20%">Button press</td>
+    </tr>
+    <tr>
+        <td width="14%">10</td>
+        <td width="17%">Blue</td>
+        <td width="17%">21</td>
+        <td width="20%">Auto Hold</td>
+    </tr>
+    <tr>
+        <td width="14%">11</td>
+        <td width="17%">Hold</td>
+        <td width="17%">22</td>
+        <td width="20%">Fast Min/Max &nbsp;</td>
+    </tr>
+    <tr>
+        <td width="14%">12</td>
+        <td width="17%">Min/Max</td>
+        <td width="17%">23</td>
+        <td width="20%">Logging</td>
+    </tr>
+    <tr>
+        <td width="14%">13</td>
+        <td width="17%">Rel</td>
+        <td width="17%">24</td>
+        <td width="20%">Not used</td>
+    </tr>
+    <tr>
+        <td width="14%">14</td>
+        <td width="17%">Up Arrow</td>
+        <td width="17%">25</td>
+        <td width="20%">Not used</td>
+    </tr>
+    <tr>
+        <td width="14%">15</td>
+        <td width="17%">Shift</td>
+        <td width="17%">26</td>
+        <td width="20%">Not used</td>
+    </tr>
+    <tr>
+        <td width="14%">16</td>
+        <td width="17%">Hz</td>
+        <td width="17%">27</td>
+        <td width="20%">Cancel</td>
+    </tr>
+    <tr>
+        <td width="14%">17</td>
+        <td width="17%">Range</td>
+        <td width="17%">28</td>
+        <td width="20%">Wakeup</td>
+    </tr>
+    <tr>
+        <td width="14%">18</td>
+        <td width="17%">Down Arrow &nbsp;</td>
+        <td width="17%">29</td>
+        <td width="20%">Setup</td>
+    </tr>
+    <tr>
+        <td width="14%">19</td>
+        <td width="17%">Backlight</td>
+        <td width="17%">30</td>
+        <td width="20%">Save</td>
+    </tr>
+    <tr>
+        <td width="14%">20</td>
+        <td width="17%">Calibration</td>
+        <td width="17%">&nbsp;</td>
+        <td width="20%">&nbsp;</td>
+    </tr>
+</table>
+
+<p>&nbsp; </p>
+
+<hr>
+
+<p><font size="2">(c) 1999 Fluke Corporation. All rights reserved.</font>
+<br>
+<font size="2">Last updated: <!--webbot bot="Timestamp"
+startspan s-type="EDITED" s-format="%m/%d/%y" -->11/27/00<!--webbot
+bot="Timestamp" i-checksum="12335" endspan --></font> </p>
+</body>
+</html>

@@ -34,6 +34,7 @@
 #include <wx/thread.h>
 #include <wx/tokenzr.h>
 #include <wx/datetime.h>
+#include <wx/config.h>
 
 // ---- other headers ----
 
@@ -210,6 +211,9 @@ private:
     DWORD          RxTotalBytecount;        // for debug or statistics
     wxTimer*       tmrToggleRTS;            // timer for generating optical cable circuit voltage supplies
     wxCriticalSection csRxBuf;
+    
+    // -- program config file
+    wxConfig*      mConfigs;                // for storing/loading user selections
     
     // -- event table
     // see start of main.cpp for the event mappings

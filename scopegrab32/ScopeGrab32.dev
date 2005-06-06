@@ -1,7 +1,7 @@
 [Project]
 FileName=ScopeGrab32.dev
 Name=ScopeGrab32
-UnitCount=6
+UnitCount=7
 Type=0
 Ver=1
 ObjFiles=
@@ -52,12 +52,12 @@ BuildCmd=
 [VersionInfo]
 Major=2
 Minor=1
-Release=0
+Release=1
 Build=1
 LanguageID=1033
 CharsetID=1252
 CompanyName=
-FileVersion=2.1.0
+FileVersion=2.1.1 alpha
 FileDescription=Serial comm tool for the Fluke ScopeMeter series
 InternalName=
 LegalCopyright=2005 Jan Wagner
@@ -102,6 +102,16 @@ FileName=ScopeGrab32_private.rc
 Folder=Resource
 Compile=0
 Link=0
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit7]
+FileName=Waveforms.h
+CompileCpp=1
+Folder=Header
+Compile=1
+Link=1
 Priority=1000
 OverrideBuildCmd=0
 BuildCmd=

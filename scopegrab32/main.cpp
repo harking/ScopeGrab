@@ -14,8 +14,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-//#define SIMULATE // define to simulate a connected scopemeter97
-
 // ************************************************************************
 // ***                                                                  ***
 // ***  ScopeGrab32 - A tool for the Fluke ScopeMeter series            ***
@@ -100,11 +98,13 @@
 // ************************************************************************
 
 #include "main.h"
-
-#define SG32_VERSION_STR    "ScopeGrab32 v2.1 alpha"
+#include "Waveforms.h"
+#include "ScopeGrab32_private.h"
 
 // instantiate the wxWidgets application MyAp (similar to WinMain())
 IMPLEMENT_APP(MyApp)
+
+
 
 // ----------------------------------------------------
 // -------------      GUI EVENT MAP       -------------
@@ -133,17 +133,19 @@ BEGIN_EVENT_TABLE(MyFrame,wxFrame)
     
 END_EVENT_TABLE()
 
+
+
 // ----------------------------------------------------
 // -------------        CONSTANTS         -------------
 // ----------------------------------------------------
 
 // list of baud rates that are supported by Fluke ScopeMeters
-int fluke_baudrates[] = { 1200, 2400, 4800, 9600, 19200, 38400, 57600 };
+int fluke_baudrates[] = { 1200, 4800, 9600, 19200 };
 
 // array for storing serial port ID's
 int combo_portIDs[MAX_COMPORT_COUNT];
 
-#define FLUKE90_WF_QUERY_NUM    11
+// waveform querying
 wxString fluke90wfQueries[FLUKE90_WF_QUERY_NUM] = {
         "QW 101", "QW 102", "QW 103", "QW 104", "QW 105", "QW 106",
         "QW 107", "QW 108", "QW 109", "QW 110", "QW 111"
@@ -153,7 +155,6 @@ wxString fluke90wfNames[FLUKE90_WF_QUERY_NUM] = {
         "Temp 3", "Memory 4", "Memory 5", "Memory 6", "Memory 7",
         "Memory 8"
     };
-#define FLUKE190_WF_QUERY_NUM   9
 wxString fluke190wfQueries[FLUKE190_WF_QUERY_NUM] = {
         "QW 10", "QW 11", "QW 12", "QW 13", "QW 20", "QW 21", "QW 22", 
         "QW 23", "QW 30"        
@@ -165,78 +166,12 @@ wxString fluke190wfNames[FLUKE190_WF_QUERY_NUM] = {
         "Channel B env (190C)", "Channel B ref (190C)",
         "Channel maths"        
     };
-    
-#define FLUKE190_WF_UNITSCOUNT  22
 wxString fluke190wfUnits[FLUKE190_WF_UNITSCOUNT] = {
         " ", "V", "A", "Ohm", "W", "F", "K", "s",
         "h", "d", "Hz", "deg", "degC", "degF", "%", "dBm 50 Ohm",
         "dBm 600 Ohm", "dB V", "dB A", "dB W", "VAR", "VA"
     };
 
-struct _fluke190wfTraceAdmin {
-    unsigned char sfd1;    // '#'
-    unsigned char sfd2;    // '0'
-    unsigned char block_header;     // 144=header only, 0=header and samples
-    unsigned int  block_length;
-    union _trace_result {
-        unsigned char byte;
-        struct _bit {
-            bool isTraceAq  : 1;
-            bool isTrend    : 1;
-            bool isEnvelope : 1;
-            bool isReference: 1;
-            bool isMaths    : 1;
-        } bit;
-    } trace_result;
-    unsigned char y_unit;
-    unsigned char x_unit;
-    unsigned int  y_divisions;
-    unsigned int  x_divisions;
-    float         y_scale;
-    float         x_scale;
-    unsigned char y_step;
-    unsigned char x_step;
-    float         y_zero;
-    float         x_zero;
-    float         y_resolution;
-    float         x_resolution;
-    float         y_at_0;
-    float         x_at_0;
-    char          date_stamp[8]; // date: yyyymmdd, string not 0-terminated
-    char          time_stamp[6]; // time: hhmmss, string not 0-terminated
-    unsigned char checksum;
-};
-struct _fluke190wfTraceSamples {
-    unsigned char sfd1;    // '#'
-    unsigned char sfd2;    // '0'
-    unsigned char block_header;     // always 129
-    unsigned long block_length;
-    union _sample_format {
-        unsigned char byte;
-        struct _bit {
-            unsigned char samp_octetlenth : 3; // how many octets one sample_value consists of
-            bool dummy : 1;
-            unsigned char samp_compination : 3; // cf PDF reference
-            bool samp_isSigned : 1;
-        } bit;
-    } sample_format;
-    // (remainder of data must be decoded manually, depends on samp_octetlenth etc)
-
-    // for filling out manually:
-    long    overload;
-    long    underload;
-    long    invalid;
-    unsigned int num_of_samples;
-    union _samples {
-        long * ldata;
-        unsigned long * uldata;
-        int * idata;
-        unsigned int * uidata;
-        char * bdata;
-        unsigned char * ubdata;
-    } samples;
-    unsigned char checksum;
-};
 
 // ----------------------------------------------------
 // -------------     HELPER FUNCTIONS     -------------
@@ -360,8 +295,10 @@ void MyFrame::VwXinit()
         m_menuHelp->Append(itemmenu);
     SetMenuBar(m_menuBar);
         statusBar=new wxStatusBar(this,-1,0,"statusBar");
-        statusBar->SetFieldsCount(1,NULL);
+        int statusWidths[] = { -1, -3 };
+        statusBar->SetFieldsCount(2, statusWidths);
         statusBar->SetStatusText("  ",0);
+        statusBar->SetStatusText("  ",1);        
     SetStatusBar(statusBar);
   
     // -- fluke serial comm
@@ -488,7 +425,6 @@ void MyFrame::VwXinit()
         comboCOM->Append(wxString::Format("/dev/ttyS%d",i).c_str(), &combo_portIDs[portCnt])
     }
     #endif
-    comboCOM->SetSelection(0);
 
     // next, add ScopeMeter supported baud rates
     for(unsigned int i=0;i<(sizeof(fluke_baudrates)/sizeof(int));++i) {
@@ -496,11 +432,22 @@ void MyFrame::VwXinit()
             wxString::Format("%d", fluke_baudrates[i]), &fluke_baudrates[i]
         );
     }
-    comboBaud->SetSelection(0);
   
-    // apply default port settings COM1 1200baud) now
-    this->ChangeComPort();
-  
+    // create config file object
+    this->mConfigs = new wxConfig("ScopeGrab32");
+    if(this->mConfigs!=NULL) {
+        mConfigs->SetPath(wxGetCwd());    
+        mConfigs->SetRecordDefaults(TRUE);
+        // get and apply previous settings now (defaults: 0=COM1, 0=1200baud)
+        comboCOM->SetSelection(mConfigs->Read("ComPort",0L));
+        comboBaud->SetSelection(mConfigs->Read("UseBaud",0L));
+        mConfigs->Flush();
+    } else {
+        comboCOM->SetSelection(0);
+        comboBaud->SetSelection(0);        
+    }
+    this->ChangeComPort(); // apply
+      
     return;
 }
 
@@ -612,46 +559,62 @@ void MyFrame::evtChangeComPort(wxCommandEvent& event)
 
 //
 // Apply new port settings
+// - try to connect at the Fluke-default 1200 baud rate, then switch 
+//   to the selected baud rate.
+// - if no response at 1200 baud, try the selected baud rate
 //
+
 void MyFrame::ChangeComPort()
 {
     BOOL ret;
     BOOL respOk;
+    int  idx, port, baud, user_baud, prev_baud;
+
+    // starting baud rate (1200 or previous user baud rate)
+    if(NULL==mySerial) {
+        baud = 1200;
+    } else {
+        if(!mySerial->isOpen()) { baud = 1200; }
+        else { baud = mySerial->getBaudrate(); }
+    }
+    prev_baud = baud;
     
+    // reset current Fluke infos    
     bFlukeDetected = FALSE;
     mScopemeterType = SCOPEMETER_NONE;
 
     // get the current/new port number
-    int idx = comboCOM->GetSelection();
+    idx = comboCOM->GetSelection();
     if ( NULL==comboCOM->GetClientData(idx) ) return;
-    int port = * (int*)comboCOM->GetClientData(idx);
+    port = *(int*)comboCOM->GetClientData(idx);
     
-    // also get the baud rate
+    // also get the desired baud rate
     idx = comboBaud->GetSelection();
     if ( NULL==comboBaud->GetClientData(idx) ) return;
-    int baud = * (int*)comboBaud->GetClientData(idx);
+    user_baud = *(int*)comboBaud->GetClientData(idx);
 
-    // (re)open the port
-    // fluke comm is always 8 databit, 1 stopbit, no parity
-    if(NULL==mySerial) { mySerial = new CSerial(this); }
+    // show hourglass
     wxBusyCursor wait;
-    tmrToggleRTS->Stop();
-    CurrRxString.Clear();
-    ReceivedStrings.Clear();
-
     GUI_Down();
-    ret = mySerial->openPort(port, baud, 8, ONESTOPBIT, 'N', 0);
-    if(FALSE==ret)
-    {
-        // show error in status bar
-        wxString errStr = wxString::Format(
-            "error opening COM%d @ %d baud - system error 0x%04lX",
-            port, baud, mySerial->getLastError() );
-        statusBar->SetStatusText(errStr,0);
+    
+    while(!bFlukeDetected) {
+        
+        // (re)open the port - fluke comm is always 8 databit, 1 stopbit, 
+        // no parity, start with 1200 baud (or previous user baud)
+        if(NULL==mySerial) { mySerial = new CSerial(this); }
+        tmrToggleRTS->Stop();
+        CurrRxString.Clear();
+        ReceivedStrings.Clear();
+        ret = mySerial->openPort(port, baud, 8, ONESTOPBIT, 'N', 0);
 
-    } else {
+        if(FALSE==ret) {
+            // port open failed
+            statusBar->SetStatusText(wxString::Format("COM%d @ %d baud",port, baud),0);
+            statusBar->SetStatusText(wxString::Format("system error 0x%04lX",mySerial->getLastError()),1);
+            break;  
+        } 
 
-        wxString infoStr = wxString::Format("COM%d @ %d baud opened", port, baud);
+        statusBar->SetStatusText(wxString::Format("COM%d @ %d baud", port, baud),0);
 
         // init circuit supply voltage 'generator'
         tmrToggleRTS->Start(TIMER_TOGGLERATE, FALSE); // given rate, not single-shot
@@ -662,26 +625,25 @@ void MyFrame::ChangeComPort()
         // try to get identification from the Fluke : <acknowledge><cr><infos><cr>
         wxString response = QueryFluke("ID",TRUE,1000,&respOk); // just the <ack>
         if(TRUE==respOk) {
-           response = GetFlukeResponse(250); // <infos> string
+            response = GetFlukeResponse(250); // <infos> string
         }
-
+        
+        wxString infoStr = "";
         if(response.Freq(';')>1) {
             bFlukeDetected = TRUE;
             strScopemeterID = response;
             // show ID in text label
             stFlukeID->SetLabel(response.BeforeFirst(';'));
             // ... and in the status bar
-            infoStr = infoStr + " - ident=" + response;
-            statusBar->SetStatusText(infoStr,0);
+            infoStr = "ident=" + response;
             // next, try to extract the scopemeter series info
             response = response.MakeUpper();
             response = response.BeforeFirst(';');
-            if(1!=response.Contains("SCOPE")) {
+            if(1!=response.Contains("SCOPE") && 1!=response.Contains("FLUKE")) {
                 // no Fluke ScopeMeter
                 mScopemeterType = SCOPEMETER_NONE;
                 bFlukeDetected = FALSE;
                 infoStr = "(unsupported) " + infoStr;
-                statusBar->SetStatusText(infoStr,0);
                 // different ScopeMeter series:
             } else if(1==(response.Contains(" 192") || response.Contains(" 196") || response.Contains(" 199"))) {
                 mScopemeterType = SCOPEMETER_190_SERIES;
@@ -690,24 +652,74 @@ void MyFrame::ChangeComPort()
             } else if(1==(response.Contains(" 97") || response.Contains(" 99"))) {
                 mScopemeterType = SCOPEMETER_97_SERIES;
             } else if(1==(response.Contains(" 123") || response.Contains(" 124")
-                      || response.Contains(" 105"))) {
+                    || response.Contains(" 105"))) {
                 mScopemeterType = SCOPEMETER_120_SERIES;
             } else {
                 // unsupported model
                 mScopemeterType = SCOPEMETER_NONE;
                 bFlukeDetected = FALSE;
                 infoStr = "(unsupported) " + infoStr;
-                statusBar->SetStatusText(infoStr,0);
             }
         } else {
             bFlukeDetected = FALSE;
             // update text label and status bar
             stFlukeID->SetLabel("<not detected>");
-            infoStr = infoStr + " - no ScopeMeter";
-            statusBar->SetStatusText(infoStr,0);
+            infoStr = "no ScopeMeter";
         }
+        statusBar->SetStatusText(infoStr,1);
+
+        // try to switch baud rate
+        if(bFlukeDetected) {
+
+            txtSerialTrace->AppendText("Got Fluke : " + infoStr + "\r\n");
+            
+            if(user_baud==baud) break; // connected at target baud, finished
+
+            prev_baud = baud;
+            baud = user_baud;
+            txtSerialTrace->AppendText(wxString::Format("Setting Fluke baudrate to %d...\r\n",baud));
+
+            wxString command = "";
+            switch(mScopemeterType) {
+                case SCOPEMETER_190_SERIES:
+                case SCOPEMETER_120_SERIES:
+                    command = wxString::Format("PC %d", baud);
+                    break;
+                case SCOPEMETER_90_SERIES:
+                    command = wxString::Format("PC%d,N,8,1,XONXOFF", baud);
+                break;
+                case SCOPEMETER_97_SERIES:
+                    command = wxString::Format("PC %d,N,8,1,XONXOFF", baud);
+                break;
+            }
+            response = QueryFluke(command,TRUE,1000,&respOk); // <ack><cr>
+            if ( TRUE==respOk ) {
+                txtSerialTrace->AppendText(wxString::Format("Ok, setting PC baudrate to %d...\r\n",baud));
+                tmrToggleRTS->Stop();
+                if(!mySerial->setBaudrate(baud)) {
+                    txtSerialTrace->AppendText("PC baud rate set failed!!\r\n");
+                }
+                tmrToggleRTS->Start(TIMER_TOGGLERATE, FALSE);
+                statusBar->SetStatusText(wxString::Format("COM%d @ %d baud",port, baud),0);
+                break;
+            } else {
+                txtSerialTrace->AppendText(wxString::Format("Fluke didn't ACK baud rate change. Staying at %d.\r\n",prev_baud));
+                break;
+            }
+            
+        } else { // !bFlukeDetected
+        
+            if(user_baud==baud) break; // finished, no Fluke
+
+            txtSerialTrace->AppendText("No Fluke found, trying user baud rate.\r\n");
+
+            // try at user specified baud
+            baud = user_baud;
+            
+        }
+
     }
-    
+            
     ResetModeldependendGUI();
     
     GUI_Up();
@@ -757,7 +769,7 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
     unsigned int GraphicsFormat = GFXFORMAT_NONE;
 
     if ( FALSE==bFlukeDetected ) {
-        statusBar->SetStatusText("screenshot: no ScopeMeter detected",0);
+        statusBar->SetStatusText("screenshot: no ScopeMeter detected",1);
         return;
     }
 
@@ -767,44 +779,7 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
     GUI_Down();
     
     wxBusyCursor wait; // displays hourglass, reverts back to normal automatically
-    
-    // -- increase baud rate to 19200 (first the Fluke, then the PC)
-    DWORD oldbaud = 0;
-    oldbaud = mySerial->getBaudrate();
-    if ( oldbaud < 19200 ) {
-        txtSerialTrace->AppendText("Temporarily setting Fluke baudrate to 19200...\r\n");
-        statusBar->SetStatusText("screenshot: changing Fluke to 19200 baud",0);
-
-        switch(mScopemeterType) {
-            case SCOPEMETER_190_SERIES:
-            case SCOPEMETER_120_SERIES:
-                command = "PC 19200";
-                strOldBaud = wxString::Format("PC %ld", oldbaud);
-                break;
-            case SCOPEMETER_90_SERIES:
-                command = "PC19200,N,8,1,XONXOFF";
-                strOldBaud = wxString::Format("PC%ld,N,8,1,XONXOFF", oldbaud);
-                break;
-            case SCOPEMETER_97_SERIES:
-                command = "PC 19200,N,8,1,XONXOFF";
-                strOldBaud = wxString::Format("PC %ld,N,8,1,XONXOFF", oldbaud);
-                break;
-        }
-        response = QueryFluke(command,TRUE,1000,&respOk); // <ack><cr>
         
-        if ( TRUE==respOk ) {
-            txtSerialTrace->AppendText("Temporarily setting PC baudrate to 19200...\r\n");
-            statusBar->SetStatusText("screenshot: changing PC to 19200 baud",0);
-            mySerial->setBaudrate(19200);
-            //??possibly need to add: set CSerial to Xon/Xoff handshaking for SM90/97 series
-        } else {
-            txtSerialTrace->AppendText("Couldn't set Fluke baurdate to 19200.\r\n");
-            statusBar->SetStatusText("screenshot: failed to set ScopeMeter to 19200 baud, aborted",0);
-            GUI_Up();
-            return;
-        }
-    }
-    
     // -- request screenshot
 
     bGotScreenshot = FALSE;
@@ -816,19 +791,19 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
             // Query Print screen 0 and postscript (3) format
             command = "QP 0,3";
             GraphicsFormat = GFXFORMAT_POSTSCRIPT;
-            statusBar->SetStatusText("screenshot: requesting postscript image",0);
+            statusBar->SetStatusText("screenshot: requesting postscript image",1);
             break;
         case SCOPEMETER_90_SERIES:
             // Query Print live screen and Epson ESC sequence format
             command = "QP"; // ???correct??
             GraphicsFormat = GFXFORMAT_EPSONESC;
-            statusBar->SetStatusText("screenshot: requesting screenshot",0);
+            statusBar->SetStatusText("screenshot: requesting screenshot",1);
             break;
         case SCOPEMETER_97_SERIES:
             // Query Graphics live screen and Epson ESC sequence format
             command = "QP"; // QP seems to work too (was "QG129")
             GraphicsFormat = GFXFORMAT_EPSONESC;
-            statusBar->SetStatusText("screenshot: requesting screen graphics",0);
+            statusBar->SetStatusText("screenshot: requesting screen graphics",1);
             break;
     }
 
@@ -841,12 +816,14 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
         this->strPostscript = "";
         response = QueryFluke(command,TRUE,1000,&respOk); // first just the <ack>
         while ( (response.Length()>0) && (TRUE==respOk) ) {
+
             // get next line
             response = GetFlukeResponse(1000); // <printer or image data><cr>
+            DoEvents();
             
             // interrupt if user wants
             if ( TRUE==this->bEscKey ) {
-                statusBar->SetStatusText("screenshot: user cancelled (ESC)",0);                
+                statusBar->SetStatusText("screenshot: user cancelled (ESC)",1);                
                 gotImage = FALSE;
                 this->bEscKey = FALSE;
                 break;    
@@ -866,7 +843,7 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
                     this->imgScreenshot->Create(FLUKESCREEN_WIDTH,FLUKESCREEN_HEIGHT);
                     this->imgScreenshot->SetMask(FALSE);
                     this->imgScreenshot->Replace(0,0,0, 0xFF,0xFF,0xFF);
-                    statusBar->SetStatusText("screenshot: receiving image...",0);
+                    statusBar->SetStatusText("screenshot: receiving image...",1);
                 }
                 continue;
             }
@@ -965,7 +942,7 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
 
             // -- interrupt now if user wants
             if ( TRUE==this->bEscKey ) {
-                statusBar->SetStatusText("screenshot: user cancelled (ESC)",0);                
+                statusBar->SetStatusText("screenshot: user cancelled (ESC)",1);                
                 gotImage = FALSE;
                 this->bEscKey = FALSE;
                 break;    
@@ -987,10 +964,10 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
                         this->imgScreenshot->Create(EPSONSCREEN_WIDTH,EPSONSCREEN_HEIGHT);
                         this->imgScreenshot->SetMask(FALSE);
                         this->imgScreenshot->Replace(0,0,0, 0xFF,0xFF,0xFF);
-                        statusBar->SetStatusText("screenshot: receiving Epson ESC...",0);
+                        statusBar->SetStatusText("screenshot: receiving Epson ESC...",1);
                         dataStart = TRUE; // actual data starts after the comma
                     } else {
-                        statusBar->SetStatusText("screenshot: response format error",0);
+                        statusBar->SetStatusText("screenshot: response format error",1);
                         txtSerialTrace->AppendText("Error, unexpected Epson ESC byte count string: '"+lenStr+"'\r\n");
                         respOk = FALSE; // quit
                     }
@@ -1088,29 +1065,17 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
 
     txtSerialTrace->AppendText(wxString::Format("debug: received %ld bytes in total.\r\n", RxTotalBytecount));
 
-    // -- image done, restore old baud
-    if ( oldbaud < 19200 ) {
-        txtSerialTrace->AppendText("Restoring old baudrate on Fluke...\r\n");
-        statusBar->SetStatusText("screenshot: restoring baudrate",0);
-        response = QueryFluke(strOldBaud,TRUE,1000,&respOk); // <ack><cr>
-        if ( FALSE==respOk ) {
-            txtSerialTrace->AppendText("Couldn't set Fluke baudrate.\r\n");
-        } else {
-            mySerial->setBaudrate(oldbaud);
-        }
-    }
-
     // -- show the final result of the operation
     if ( TRUE==gotImage ) {
-        statusBar->SetStatusText("screenshot: complete image received",0);
+        statusBar->SetStatusText("screenshot: complete image received",1);
         txtSerialTrace->AppendText("Screenshot complete.\r\n");
     } else {
         if ( FALSE==imageStart ) {
             txtSerialTrace->AppendText("Screenshot error: the response did not contain any image\r\n");
-            statusBar->SetStatusText("screenshot: no image received",0);
+            statusBar->SetStatusText("screenshot: no image received",1);
         } else {
             txtSerialTrace->AppendText("Screenshot error: ran out of data before image end\r\n");
-            statusBar->SetStatusText("screenshot: incomplete image received",0);
+            statusBar->SetStatusText("screenshot: incomplete image received",1);
         }
     }
 
@@ -1127,7 +1092,7 @@ void MyFrame::evtSaveImage(wxCommandEvent& event)
     wxString filePath;
     // screenshot available?
     if ( FALSE==bGotScreenshot ) {
-        statusBar->SetStatusText("save image: error, no screenshot available!",0);
+        statusBar->SetStatusText("save image: error, no screenshot available!",1);
         return;
     }
     // check if a previous saving path is remembered
@@ -1145,9 +1110,9 @@ void MyFrame::evtSaveImage(wxCommandEvent& event)
     saveDialog->Destroy();
     // try to save the .BMP file
     if ( FALSE==this->imgScreenshot->SaveFile (filePath,wxBITMAP_TYPE_BMP ) ) {
-        statusBar->SetStatusText("save BMP: error during saving!",0);
+        statusBar->SetStatusText("save BMP: error during saving!",1);
     } else {
-        statusBar->SetStatusText("save BMP: done.",0);
+        statusBar->SetStatusText("save BMP: done.",1);
     }
     // store the path name for the next Save File dialog
     strPrevSavePath = filePath.BeforeLast('\\');
@@ -1162,7 +1127,7 @@ void MyFrame::evtClipboardImage(wxCommandEvent& event)
 {
     // screenshot available?
     if ( FALSE==bGotScreenshot ) {
-        statusBar->SetStatusText("copy to clipbrd: error, no screenshot available!",0);
+        statusBar->SetStatusText("copy to clipbrd: error, no screenshot available!",1);
         return;
     }
     // try to place bitmap on the clipboard
@@ -1170,9 +1135,9 @@ void MyFrame::evtClipboardImage(wxCommandEvent& event)
         wxTheClipboard->SetData ( new wxBitmapDataObject(sbmpScreenshot->GetBitmap()) );
         wxTheClipboard->Flush(); // keeps image on clipbrd even after this app exits
         wxTheClipboard->Close();
-        statusBar->SetStatusText("copy to clipbrd: done.",0);
+        statusBar->SetStatusText("copy to clipbrd: done.",1);
     } else {
-        statusBar->SetStatusText("copy to clipbrd: error, couldn't open clipboard!",0);
+        statusBar->SetStatusText("copy to clipbrd: error, couldn't open clipboard!",1);
     }
     return;
 }
@@ -1186,7 +1151,7 @@ void MyFrame::evtSavePostscript(wxCommandEvent& event)
     wxString filePath;
     // screenshot available?
     if ( strPostscript.Length()<128 ) {
-        statusBar->SetStatusText("save postscript: error, no screenshot available!",0);
+        statusBar->SetStatusText("save postscript: error, no screenshot available!",1);
         return;
     }
     // check if a previous saving path is remembered
@@ -1207,14 +1172,14 @@ void MyFrame::evtSavePostscript(wxCommandEvent& event)
     if ( TRUE==outputFile.IsOpened() ) {
         outputFile.Seek(0, wxFromStart);
         if ( TRUE==outputFile.Write(this->strPostscript,wxConvLibc) ) {
-            statusBar->SetStatusText("save postscript: done",0);
+            statusBar->SetStatusText("save postscript: done",1);
         } else {
-            statusBar->SetStatusText("save postscript: error, file write failed",0);
+            statusBar->SetStatusText("save postscript: error, file write failed",1);
         }
         outputFile.Flush();
         outputFile.Close();
     } else {
-        statusBar->SetStatusText("save postscript: error, couldn't create file!",0);
+        statusBar->SetStatusText("save postscript: error, couldn't create file!",1);
     }
     // store the path name for the next Save File dialog
     strPrevSavePath = filePath.BeforeLast('\\');
@@ -1240,7 +1205,7 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
 
     // need to be connected first
     if ( FALSE==bFlukeDetected ) {
-        statusBar->SetStatusText("waveforms: no ScopeMeter detected",0);
+        statusBar->SetStatusText("waveforms: no ScopeMeter detected",1);
         return;
     }
 
@@ -1262,17 +1227,17 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
     if ( !respOk ) {
         
         txtSerialTrace->AppendText("Waveform: query failed.\r\n");
-        statusBar->SetStatusText("waveforms: download request failed",0);
+        statusBar->SetStatusText("waveforms: download request failed",1);
         
     } else {
 
-        statusBar->SetStatusText("waveforms: downloading",0);
+        statusBar->SetStatusText("waveforms: downloading",1);
         response = GetFlukeResponse(5000); // <binary data string>
         if ( response.Length()<=0 ) {
             txtSerialTrace->AppendText("Waveform: Timed out waiting for data.\r\n");
             gotFullWF = FALSE;
         } else {        
-            statusBar->SetStatusText("waveforms: got waveform",0);
+            statusBar->SetStatusText("waveforms: got waveform",1);
             txtSerialTrace->AppendText("Waveform data:" + response + "\r\n");        
             gotFullWF = TRUE;            
         }
@@ -1315,6 +1280,7 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
             }
             // TODO: decode!
             // ptrTraceAdmin->block_length ...
+            csvStr = response;
             
             break;
             
@@ -1412,7 +1378,7 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
             wxTheClipboard->SetData ( new wxTextDataObject(matlabStr) );
             wxTheClipboard->Flush();
             wxTheClipboard->Close();
-            statusBar->SetStatusText("waveforms: got waveform - Matlab code on clipboard",0);
+            statusBar->SetStatusText("waveforms: got waveform - Matlab code on clipboard",1);
         }
 
         // -- save a .CSV file
@@ -1434,7 +1400,7 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
                 wxString modelStr = this->strScopemeterID;
                 modelStr.Replace(";"," ",TRUE);
                 wxString infoStr = "## Fluke scopemeter waveform capture - generated with "
-                    + wxString(SG32_VERSION_STR) + "\r\n"
+                    + wxString(PRODUCT_NAME)+wxString(" ")+wxString(FILE_VERSION)+ "\r\n"
                     + "## wave downloaded " + now.FormatISODate() + " " + now.FormatISOTime() + "\r\n"
                     + "## SM model: " +  modelStr + "\r\n"
                     + "## data in decimal notation (use find/replace . to , if necessary)\r\n"
@@ -1443,7 +1409,7 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
                     txtSerialTrace->AppendText("Waveform: could not write data to CSV file!\r\n");
                 } else {
                     txtSerialTrace->AppendText("Waveform: stored to CSV file\r\n");
-                    statusBar->SetStatusText("waveforms: Matlab code on clipboard, data in CSV file",0);
+                    statusBar->SetStatusText("waveforms: Matlab code on clipboard, data in CSV file",1);
                 }
                 outfile->Close();
             }
@@ -1464,7 +1430,9 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
 //
 void MyFrame::OnMenuAbout(wxMenuEvent& event)
 {
-    wxMessageBox(wxString(SG32_VERSION_STR)+"\r\n\rAn open source tool for communicating\r\n"
+    // Show prog and version info (cf. ScopeGrab32_private.h and/or project settings)
+    wxMessageBox(wxString(PRODUCT_NAME)+wxString(" ")+wxString(FILE_VERSION)+
+        "\r\n\rAn open source tool for communicating\r\n"
         "with a Fluke Scopemeter and also do a\r\nscreen capture.\r\n\r\n"
         "Supported models: 190 and 190C series\r\n\r\n"
         "Alpha 'support': 123,124,91,92,96 and 97,99\r\n\r\n"
@@ -1480,8 +1448,21 @@ void MyFrame::OnMenuAbout(wxMenuEvent& event)
 //
 void MyFrame::OnMenuExit(wxMenuEvent& event)
 {
-    mySerial->closePort();
-    Close(); // exit the app
+    // close serial comms
+    tmrToggleRTS->Stop();
+    if(NULL!=mySerial) {
+        mySerial->closePort();
+        delete mySerial;
+    }
+    // store settings
+    if(this->mConfigs!=NULL) {
+        mConfigs->Write("ComPort",(long)comboCOM->GetSelection());
+        mConfigs->Write("UseBaud",(long)comboBaud->GetSelection());
+        mConfigs->Flush();
+        delete mConfigs;
+    }
+    // exit the app
+    Close();
 }
 
 
@@ -1493,7 +1474,7 @@ void MyFrame::OnMenuExit(wxMenuEvent& event)
 
 //
 // Timer event: pulse the RTS pin to generate
-// Scopemeter DIY cable / circuit supply voltages
+// Scopemeter PM9080 cable and DIY cable circuit supply voltages
 //
 void MyFrame::evtRtsTimer(wxTimerEvent& event)
 {
@@ -1503,6 +1484,7 @@ void MyFrame::evtRtsTimer(wxTimerEvent& event)
         tmrToggleRTS->Stop();
         return;
     }
+    // flip RTS state
     mySerial->setRTS(!mySerial->getRTS());
     return;
 }
