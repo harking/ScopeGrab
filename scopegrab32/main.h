@@ -19,6 +19,7 @@
 #include <wx/image.h>
 #include <wx/statbmp.h>
 #include <wx/menu.h>
+#include <wx/menuitem.h>
 #include <wx/stattext.h>
 #include <wx/combobox.h>
 #include <wx/checkbox.h>
@@ -35,6 +36,7 @@
 #include <wx/tokenzr.h>
 #include <wx/datetime.h>
 #include <wx/config.h>
+#include <wx/html/helpctrl.h>
 
 // ---- other headers ----
 
@@ -42,22 +44,26 @@
 
 // ---- GUI control IDs -----
 
-#define ID_MENU_2               1
-#define ID_MENU_EXIT            2
-#define ID_MENU_ABOUT           3
-#define ID_COMBO_BAUD           4
-#define ID_COMBO_COM            5
-#define ID_SCREENSHOT           6
-#define ID_BTN_GETSCREENSHOT    7
-#define ID_BTN_SAVEIMAGE        8
-#define ID_BTN_CLIPBOARDIMAGE   9
-#define ID_BTN_SAVEPOSTSCRIPT   10
-#define ID_BTN_SEND             11
-#define ID_BTN_RECONNECT        12
-#define ID_RTSTIMER             13
-#define ID_TXTCTL_CONSOLECMD    14
-#define ID_BTN_WAVE             15
-#define ID_TASKTIMER            16
+#define ID_MENU_FILE            1
+#define ID_MENU_HELP            2
+#define ID_MENU_SETTINGS        3
+#define ID_MENU_CHECK1          10
+#define ID_MENU_EXIT            11
+#define ID_MENU_ABOUT           12
+#define ID_MENU_USRSGUIDE       13
+#define ID_COMBO_BAUD           20
+#define ID_COMBO_COM            21
+#define ID_SCREENSHOT           30
+#define ID_BTN_GETSCREENSHOT    40
+#define ID_BTN_SAVEIMAGE        41
+#define ID_BTN_CLIPBOARDIMAGE   42
+#define ID_BTN_SAVEPOSTSCRIPT   43
+#define ID_BTN_SEND             44
+#define ID_BTN_RECONNECT        45
+#define ID_BTN_WAVE             46
+#define ID_TXTCTL_CONSOLECMD    60
+#define ID_TASKTIMER            100
+#define ID_RTSTIMER             101
 
 #define WINDOW_WIDTH            655
 #define WINDOW_HEIGHT           665
@@ -145,6 +151,7 @@ private:
     // menu
     void        OnMenuExit(wxMenuEvent& event);
     void        OnMenuAbout(wxMenuEvent& event);
+    void        OnMenuGuide(wxMenuEvent& event);
     // serial port selection
     void        evtChangeComPort(wxCommandEvent& event);
     void        evtReconnect(wxCommandEvent& event);
@@ -165,9 +172,11 @@ private:
     // -- GUI components
     wxMenuBar   *m_menuBar;
     wxMenu      *m_menuFile;
+    wxMenu      *m_menuSettings;
     wxMenu      *m_menuHelp;
     wxStatusBar *statusBar;
- 
+    wxMenuItem  *m_menuNoBaudWarn;
+    
     wxComboBox  *comboCOM;
     wxComboBox  *comboBaud;
  
@@ -225,6 +234,8 @@ private:
     wxTimer*       tmrPostTasks;            // for scheduling tasks after window startup
     int            posttask;                // type of -"- task
         
+    wxHtmlHelpController *m_helpFile;       // program help file
+
     // -- event table
     // see start of main.cpp for the event mappings
     DECLARE_EVENT_TABLE()
