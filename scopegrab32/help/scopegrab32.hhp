@@ -1,0 +1,15 @@
+[OPTIONS]
+Auto Index=Yes
+Auto TOC=3
+Binary TOC=Yes
+Compatibility=1.1 or later
+Compiled file=scopegrab32.chm
+Contents file=TOC.hhc
+Display compile progress=No
+Full-text search=Yes
+Index file=Index.hhk
+Language=0x809 English (United Kingdom)
+
+
+[INFOTYPES]
+

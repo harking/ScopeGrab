@@ -1,0 +1,21 @@
+<html><body bgcolor=white>
+<font face="Arial">
+<h1>Connecting to the ScopeMeter</h1>
+Connecting is fairly straightforward. Plug in your optical cable, then start ScopeGrab32, and it will automatically check for a SM. SG32 retains the port and baud rate settings from the previous program run. At the first run, it defaults to COM1 and 19200 baud.<br>
+<br>
+Because the SM's will be using 1200 default baud when they are powered up, SG32 will automatically check this baud rate too, no matter what baudrate was selected in the dropdown list. If a SM is found, the baud rate will be increased to the value that you selected. It's advisable to use 19200 baud, so that the screenshot downloads are fast. If your cable can not cope, you may select a lower baud rate.<br>
+<br>
+If you plugged in the SM <i>after</i> starting SG32, just click on the "Connect" button.<br>
+<br>
+After a successful connect, you'll see the SM type displayed below the COM port box, and the full ID string in the status bar.<br> 
+<br>
+<img src="connected.gif"><br>
+(note: window image was cut smaller in Photoshop...)<br>
+<br>
+Troubleshooting: if you are using an USB-RS232 dongle and find that connecting does not work, the first thing to check is that you have selected the correct COM port in Scopegrab. With the dongles, the COM port may end up to be mostly anything, so go to Windows 2k/XP's/Vista Control Panel, Administrative Tools, Computer Management, Device Manager, and find the Ports entries in the list (when in the menu "View", "Devices by type" is selected). Check which COM port belongs to the USB dongle. In Windows 95/98/ME, the procedure is similar, again via Control Panel, System Properties, Device Manager.<br>
+If this didn't solve the problem, and you're using a DIY cable, check that your cable's optical end is plugged into the SM the right way round. If it still doesn't work, maybe it's time to check your circuit...<br>
+<br>
+<hr size=1>
+<center><font color="#666666">(C) 2005 Jan Wagner, jan.wagner@iki.fi</font></center>
+</font>
+</body></html>
