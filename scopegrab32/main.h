@@ -37,6 +37,7 @@
 #include <wx/datetime.h>
 #include <wx/config.h>
 #include <wx/html/helpctrl.h>
+#include <wx/msw/helpchm.h>
 
 // ---- other headers ----
 
@@ -234,8 +235,12 @@ private:
     wxTimer*       tmrPostTasks;            // for scheduling tasks after window startup
     int            posttask;                // type of -"- task
         
-    wxHtmlHelpController *m_helpFile;       // program help file
-
+    #ifdef __WIN32__
+    wxCHMHelpController *m_helpFile;        // program help file, CHM in Windows
+    #else
+    wxHtmlHelpController *m_helpFile;       // program help file, hhp in Linux
+    #endif
+    
     // -- event table
     // see start of main.cpp for the event mappings
     DECLARE_EVENT_TABLE()

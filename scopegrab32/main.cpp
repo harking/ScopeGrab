@@ -464,9 +464,14 @@ void MyFrame::VwXinit()
     }
 
     // helpfile
+    #ifdef __WIN32__
+    m_helpFile = new wxCHMHelpController();
+    m_helpFile->Initialize(".\\help\\scopegrab32.chm");
+    #else
     m_helpFile = new wxHtmlHelpController(wxHF_DEFAULT_STYLE);
-    m_helpFile->AddBook(wxFileName("ScopeGrab32.hhp"),false);
-
+    m_helpFile->AddBook(wxFileName("./help/scopegrab32.hhp"),false);
+    #endif
+    
     // schedule config loader after window is visible
     this->mConfigs = new wxConfig("ScopeGrab32");
     GUI_Down();
@@ -1391,7 +1396,11 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
             }
             // TODO: decode!
             // ptrTraceAdmin->block_length ...
-            csvStr = response;
+            matlabStr = "hex: ";
+            for ( idx=0; idx<(long)response.Length(); ++idx ) {
+                matlabStr += wxString::Format("%02X ", response.GetChar(idx));
+            }
+            csvStr = matlabStr;
             
             break;
             
@@ -1546,7 +1555,7 @@ void MyFrame::OnMenuAbout(wxMenuEvent& event)
         "\r\n\rAn open source tool for communicating\r\n"
         "with a Fluke Scopemeter and also do a\r\nscreen capture.\r\n\r\n"
         "Supported models: 190 and 190C series\r\n\r\n"
-        "Alpha 'support': 123,124,91,92,96 and 97,99\r\n\r\n"
+        "Beta support: 123,124,91,92,96 and 97,99\r\n\r\n"
         "(C) 2005 Jan Wagner\r\njwagner@cc.hut.fi\r\n\r\n"
         "Thanks go to: Jens F., Ethan W., Stuart P., \r\n"
         "Wayne L., Kristijan B., Leif K.",

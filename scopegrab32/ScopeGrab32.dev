@@ -51,13 +51,13 @@ BuildCmd=
 
 [VersionInfo]
 Major=2
-Minor=1
-Release=1
+Minor=2
+Release=0
 Build=1
 LanguageID=1033
 CharsetID=1252
 CompanyName=
-FileVersion=2.1.1 alpha
+FileVersion=2.2.0
 FileDescription=Serial comm tool for the Fluke ScopeMeter series
 InternalName=
 LegalCopyright=2005 Jan Wagner
