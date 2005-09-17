@@ -1565,7 +1565,7 @@ void MyFrame::OnMenuAbout(wxMenuEvent& event)
         "with a Fluke Scopemeter and also do a\r\nscreen capture.\r\n\r\n"
         "Supported models: 190 and 190C series\r\n\r\n"
         "Beta support: 123,124,91,92,96 and 97,99\r\n\r\n"
-        "(C) 2005 Jan Wagner\r\njwagner@cc.hut.fi\r\n\r\n"
+        "(C) 2005 Jan Wagner\r\nRequests and bugs to: jan.wagner@iki.fi\r\n\r\n"
         "Thanks go to: Jens F., Ethan W., Stuart P., \r\n"
         "Wayne L., Kristijan B., Leif K.",
         "About ScopeGrab32",
