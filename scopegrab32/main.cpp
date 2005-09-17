@@ -1398,7 +1398,7 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
             // ptrTraceAdmin->block_length ...
             matlabStr = "hex: ";
             for ( idx=0; idx<(long)response.Length(); ++idx ) {
-                matlabStr += wxString::Format("%02X ", response.GetChar(idx));
+                matlabStr += wxString::Format("%02X ", (unsigned char)response.GetChar(idx));
             }
             csvStr = matlabStr;
             
@@ -1490,7 +1490,7 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
                         y_offset-((float)0x80)*delta_y, y_offset+((float)0x80)*delta_y);
             matlabStr = preStr + matlabStr;
             break;
-        }
+        }//(switch)
         
         // -- store the Matlab code snippet in the textbox and on the clipboard
         txtWavestring->SetValue(matlabStr);
@@ -1502,42 +1502,51 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
         }
 
         // -- save a .CSV file
-        if ( strPrevSavePath.Length()<1 ) {
-            strPrevSavePath = wxGetCwd(); // default to current directory
-        }
-        // select a new file
-        wxFileDialog* saveDialog = new wxFileDialog (
-            (wxWindow *)this, "Save waveform data to CSV text file",
-            strPrevSavePath, "", "Character Separated Values file (*.csv)|*.csv",
-            wxSAVE|wxOVERWRITE_PROMPT
-        );
-        if ( wxID_CANCEL!=saveDialog->ShowModal() ) { 
-            str = saveDialog->GetPath();
-            // write info and waveform string to CSV file
-            wxFile *outfile = new wxFile(str.c_str(), wxFile::write);
-            if ( (NULL!=outfile) && (true==outfile->IsOpened()) ) {
-                wxDateTime now = wxDateTime::Now();
-                wxString modelStr = this->strScopemeterID;
-                modelStr.Replace(";"," ",true);
-                wxString infoStr = "## Fluke scopemeter waveform capture - generated with "
-                    + wxString(PRODUCT_NAME)+wxString(" ")+wxString(FILE_VERSION)+ "\r\n"
-                    + "## wave downloaded " + now.FormatISODate() + " " + now.FormatISOTime() + "\r\n"
-                    + "## SM model: " +  modelStr + "\r\n"
-                    + "## data in decimal notation (use find/replace . to , if necessary)\r\n"
-                    + "\r\n";
-                if ( !outfile->Write(infoStr) || !outfile->Write(csvStr) ) {
-                    txtSerialTrace->AppendText("Waveform: could not write data to CSV file!\r\n");
-                } else {
-                    txtSerialTrace->AppendText("Waveform: stored to CSV file\r\n");
-                    statusBar->SetStatusText("waveforms: Matlab code on clipboard, data in CSV file",1);
-                }
-                outfile->Close();
+        if(SCOPEMETER_97_SERIES==mScopemeterType || SCOPEMETER_90_SERIES==mScopemeterType) {
+
+            if ( strPrevSavePath.Length()<1 ) {
+                strPrevSavePath = wxGetCwd(); // default to current directory
             }
-            // store the path name for the next Save File dialog
-            strPrevSavePath = str.BeforeLast('\\');
-        }
-        saveDialog->Destroy();
-        
+            // select a new file
+            wxFileDialog* saveDialog = new wxFileDialog (
+                (wxWindow *)this, "Save waveform data to CSV text file",
+                strPrevSavePath, "", "Character Separated Values file (*.csv)|*.csv",
+                wxSAVE|wxOVERWRITE_PROMPT
+            );
+            if ( wxID_CANCEL!=saveDialog->ShowModal() ) { 
+                str = saveDialog->GetPath();
+                // write info and waveform string to CSV file
+                wxFile *outfile = new wxFile(str.c_str(), wxFile::write);
+                if ( (NULL!=outfile) && (true==outfile->IsOpened()) ) {
+                    wxDateTime now = wxDateTime::Now();
+                    wxString modelStr = this->strScopemeterID;
+                    modelStr.Replace(";"," ",true);
+                    wxString infoStr = "## Fluke scopemeter waveform capture - generated with "
+                        + wxString(PRODUCT_NAME)+wxString(" ")+wxString(FILE_VERSION)+ "\r\n"
+                        + "## wave downloaded " + now.FormatISODate() + " " + now.FormatISOTime() + "\r\n"
+                        + "## SM model: " +  modelStr + "\r\n"
+                        + "## data in decimal notation (use find/replace . to , if necessary)\r\n"
+                        + "\r\n";
+                    if ( !outfile->Write(infoStr) || !outfile->Write(csvStr) ) {
+                        txtSerialTrace->AppendText("Waveform: could not write data to CSV file!\r\n");
+                    } else {
+                        txtSerialTrace->AppendText("Waveform: stored to CSV file\r\n");
+                        statusBar->SetStatusText("waveforms: Matlab code on clipboard, data in CSV file",1);
+                    }
+                    outfile->Close();
+                }
+                // store the path name for the next Save File dialog
+                strPrevSavePath = str.BeforeLast('\\');
+            }
+            saveDialog->Destroy();
+
+        } else {
+            wxMessageBox(
+                "Waveform data decoding is currently supported only for ScopeMeter 9x series.\r\n"
+                "The raw hex waveform data has been placed on the clipboard.",
+                "Note",
+                wxOK | wxICON_INFORMATION, this);
+        }         
     }
 
     GUI_Up();
