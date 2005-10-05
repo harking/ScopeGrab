@@ -3,7 +3,9 @@
 
 typedef unsigned char   BYTE;
 typedef unsigned long   DWORD;
-typedef unsigned int    HANDLE;
+typedef signed int      HANDLE;
 typedef void *          LPVOID;
+
+#define INVALID_HANDLE_VALUE     -1
 
 #endif // __Linux_typedefs_H__

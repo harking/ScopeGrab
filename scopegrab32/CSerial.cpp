@@ -56,7 +56,7 @@ CSerial::~CSerial() {
 bool CSerial::openPort(
    BYTE portnum, DWORD baudrate,
    BYTE databits, BYTE stopbits,
-   BYTE parity, BYTE handshaking ) {
+   BYTE parity, BYTE handshaking, char* portStr ) {
 
    // check for parameters for valid range
    if ( portnum<1 || portnum>64 ) return false;
@@ -64,7 +64,8 @@ bool CSerial::openPort(
    if ( databits<5 || databits>8 ) return false;
    if ( ONESTOPBIT!=stopbits && ONE5STOPBITS!=stopbits
          && TWOSTOPBITS!=stopbits ) return false;
-
+   // portStr ignored in Windows, for now
+   
    // if the port is already open, close it first,
    // then re-open with the new settings
    if ( true == this->isOpen() ) { this->closePort(); }

@@ -1,3 +1,19 @@
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ */
+
 #ifndef _CSERIAL_H
 #define _CSERIAL_H
 
@@ -6,11 +22,16 @@
    #include <windows.h>
    #include <process.h>
 #else
-   // use http://www.easysw.com/~mike/serial/serial.html
    #include "linux_typedefs.h"
    #include <termios.h>
-   #define ONESTOPBIT 0
-   #define TWOSTOPBIT CSTOPB
+   #include <termio.h>
+   #include <fcntl.h>
+   #include <errno.h>
+   #include <unistd.h>
+   #include <pthread.h>
+   #define ONESTOPBIT   0
+   #define ONE5STOPBITS 0
+   #define TWOSTOPBITS  CSTOPB
 #endif
 
 
@@ -35,7 +56,7 @@ public:
 public:
    bool openPort(BYTE portnum, DWORD baudrate,
          BYTE databits, BYTE stopbits,
-         BYTE parity, BYTE handshaking);
+         BYTE parity, BYTE handshaking, char* portStr);
    bool isOpen();
    bool closePort();
 
@@ -59,14 +80,18 @@ public:
    // public vars for the receiver thread/function to access
 public:
    struct MyFrame*  frmMain; // for accessing the callback OnCommEvent() func
-   volatile HANDLE  m_portHdl;
-   HANDLE           m_hdl_RxThread;
    volatile bool    m_RxThread_Running;
    volatile bool    m_RxThread_Shutdown;
-   DWORD            m_RxThread_ID;
    #ifdef __WIN32__
+   DWORD            m_RxThread_ID;
    OVERLAPPED       m_overlapRx;
    OVERLAPPED       m_overlapTx;
+   HANDLE           m_hdl_RxThread;
+   volatile HANDLE  m_portHdl;
+   #else
+   int               m_portHdl;
+   struct termios    m_serialopt;
+   pthread_t*        m_hdl_RxThread;
    #endif
    HANDLE           m_evtRead;
    HANDLE           m_evtWrite;

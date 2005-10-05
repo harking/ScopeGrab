@@ -19,7 +19,7 @@
 // ***  ScopeGrab32 - A tool for the Fluke ScopeMeter series            ***
 // ***  (C) 2004 Jan Wagner                                             ***
 // ***                                                                  ***
-// ***  Version: 2.1.0 alpha                                            ***
+// ***  Version: 2.2.0L alpha                                           ***
 // ***                                                                  ***
 // ***  Licence: GNU GPL                                                ***
 // ***                                                                  ***
@@ -687,7 +687,7 @@ void MyFrame::ChangeComPort()
         tmrToggleRTS->Stop();
         CurrRxString.Clear();
         ReceivedStrings.Clear();
-        ret = mySerial->openPort(port, baud, 8, ONESTOPBIT, 'N', 0);
+        ret = mySerial->openPort(port, baud, 8, ONESTOPBIT, 'N', 0, " ");
 
         if(false==ret) {
             // port open failed

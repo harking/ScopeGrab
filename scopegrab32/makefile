@@ -3,8 +3,8 @@
 
 CPP  = g++ -D__DEBUG__
 CC   = gcc -D__DEBUG__
-WINDRES = windres.exe
-RES  = ScopeGrab32_private.res
+# WINDRES = windres.exe
+# RES  = ScopeGrab32_private.res
 OBJ  = main.o CSerialLinux.o $(RES)
 LINKOBJ  = main.o CSerialLinux.o $(RES)
 LIBS =  `wx-config --libs`
@@ -32,5 +32,5 @@ main.o: main.cpp
 CSerialLinux.o: CSerialLinux.cpp
 	$(CPP) -c CSerialLinux.cpp -o CSerialLinux.o $(CXXFLAGS)
 
-ScopeGrab32_private.res: ScopeGrab32_private.rc ScopeGrab32_private.rc Resources.rc 
-	$(WINDRES) -i ScopeGrab32_private.rc --input-format=rc -o ScopeGrab32_private.res -O coff 
+# ScopeGrab32_private.res: ScopeGrab32_private.rc ScopeGrab32_private.rc Resources.rc 
+#	$(WINDRES) -i ScopeGrab32_private.rc --input-format=rc -o ScopeGrab32_private.res -O coff 
