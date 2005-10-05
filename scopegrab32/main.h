@@ -124,6 +124,16 @@ extern int fluke_baudrates[];
 #define GFXFORMAT_ADCSAMPLES  3
 #define GFXFORMAT_PNG         4
 
+// GUI combo box widths
+#ifdef __WIN32__
+   #define CB_COM_WIDTH 65
+   #define MNU_OFFSET 0
+#else
+   #define CB_COM_WIDTH 110
+   #define MNU_OFFSET 20
+#endif 
+#define CB_BAUD_WIDTH 85
+
 // ---- wxWidgets application class ----
 
 class MyApp : public wxApp {

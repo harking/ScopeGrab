@@ -56,7 +56,7 @@ public:
 public:
    bool openPort(BYTE portnum, DWORD baudrate,
          BYTE databits, BYTE stopbits,
-         BYTE parity, BYTE handshaking, char* portStr);
+         BYTE parity, BYTE handshaking, const char* portStr);
    bool isOpen();
    bool closePort();
 
@@ -101,6 +101,9 @@ private:
    bool             m_RTSon;
    DWORD            m_PreviousError;
 
+   #ifndef __WIN32__
+   int   baudToValue(unsigned int baud);
+   #endif
 };
 
 #endif // _CSERIAL_H

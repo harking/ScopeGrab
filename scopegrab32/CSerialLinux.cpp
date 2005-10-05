@@ -76,10 +76,8 @@ CSerial::CSerial(MyFrame* clientFrmMain) {
 // *
 
 CSerial::~CSerial() {
-	this->closePort();
+   this->closePort();
 }
-
-
 
 
 
@@ -88,7 +86,7 @@ CSerial::~CSerial() {
 // *  bool openPort(int portnum, int baudrate, ...)
 // *
 // *  Arguments: portnum - COM port to open (0..64)
-// *             baudrate - baud rate (B1200..B115200)
+// *             baudrate - baud rate (1200..115200)
 // *             databits - num of databits (1..8) !ignored
 // *             stopbits - num of stopbits (0..8) !ignored
 // *             parity   - 'N'=none, 'O'=odd, 'E'=even,
@@ -107,13 +105,15 @@ CSerial::~CSerial() {
 bool CSerial::openPort(
    BYTE portnum, DWORD baudrate,
    BYTE databits, BYTE stopbits,
-   BYTE parity, BYTE handshaking, char* portStr ) {
+   BYTE parity, BYTE handshaking, const char* portStr ) {
 
    int i = 0;
+   
+   m_PreviousError = 0;
       
    // check for parameters for valid range
    if ( NULL==portStr && (portnum>64) ) return false;
-   if ( baudrate<B1200 || baudrate>B115200 ) return false;
+   if ( baudrate<1200 || baudrate>115200 ) return false;
    //if ( databits<5 || databits>8 ) return false;
    //if ( ONESTOPBIT!=stopbits && ONE5STOPBITS!=stopbits
    //      && TWOSTOPBITS!=stopbits ) return false;
@@ -131,14 +131,14 @@ bool CSerial::openPort(
       ostr << "/dev/ttyS" << (int)portnum << std::flush;
       portStr = (char *)ostr.str().c_str();
    }
-   this->m_portHdl = open(portStr, O_RDWR | O_NOCTTY | O_NDELAY);
-
+   this->m_portHdl = open(portStr, O_RDWR | O_NOCTTY);
    if ( INVALID_HANDLE_VALUE == m_portHdl ) {
       m_PreviousError = errno;
+      perror(portStr);
       return false;
-   } else {
-      fcntl(m_portHdl, F_SETFL, 0); // use a blocking read()
-   }
+   } 
+   
+   fcntl(m_portHdl, F_SETFL, 0); // use a blocking read()
 
    // port was opened, get properties block
    tcgetattr(m_portHdl, &m_serialopt);
@@ -176,7 +176,8 @@ bool CSerial::openPort(
    m_serialopt.c_cc[VMIN] = 1;   // wait for 1 byte at a time
    m_serialopt.c_cc[VTIME] = 0;  // blocking wait (no timeout)
    
-   // set the baudrate
+   // set the baudrate (convert to Bxxxx constant first)
+   baudrate = baudToValue(baudrate);
    cfsetispeed(&m_serialopt, baudrate);
    cfsetospeed(&m_serialopt, baudrate);
 
@@ -243,6 +244,8 @@ bool CSerial::isOpen() {
 // *  Returns: true if closing was successful, FALSE if an error occured
 
 bool CSerial::closePort() {
+
+   m_PreviousError = 0;
 
    if ( NULL==m_hdl_RxThread ) {
          this->m_RxThread_Running = false;
@@ -482,7 +485,7 @@ bool CSerial::setBaudrate(DWORD baudrate) {
    if ( INVALID_HANDLE_VALUE==m_portHdl ) return false;
 
    // baud rate is valid/supported?
-   if ( baudrate<B1200 || baudrate>B115200 ) return false;
+   if ( baudrate<1200 || baudrate>115200 ) return false;
 
    // get the current config
    if ( -1==tcgetattr(m_portHdl, &m_serialopt) ) {
@@ -491,6 +494,7 @@ bool CSerial::setBaudrate(DWORD baudrate) {
    }  
    
    // write the new baud rate
+   baudrate = baudToValue((unsigned int)baudrate);
    cfsetispeed(&m_serialopt, baudrate);
    cfsetospeed(&m_serialopt, baudrate);
    
@@ -648,3 +652,36 @@ void CSerial::clearCommErrors() {
    return;
 }
 
+
+
+// ****************************************************************
+// *  int baudToValue(baud)
+// *
+// *  Returns: posix baud rate constant that corresponds to
+// *           the specified integer baud rate
+// *
+
+int CSerial::baudToValue(unsigned int baud) {
+   switch(baud) {
+      case 300:
+         return B300;
+      case 600:
+         return B600;
+      case 1200:
+         return B1200;
+      case 2400:
+         return B2400;
+      case 4800:
+         return B4800;
+      case 9600:
+         return B9600;
+      case 19200:
+         return B19200;
+      case 38400:
+         return B38400;
+      case 57600:
+         return B57600;
+      default:
+         return 0;
+   }
+}

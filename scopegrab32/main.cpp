@@ -296,8 +296,8 @@ void MyFrame::VwXinit()
 
     // -- menu and status bar
     
-        statusBar=new wxStatusBar(this,-1,0,"statusBar");
-        int statusWidths[] = { -1, -3 };
+    statusBar=new wxStatusBar(this,-1,0,"statusBar");
+    int statusWidths[] = { -1, -3 };
         statusBar->SetFieldsCount(2, statusWidths);
         statusBar->SetStatusText("  ",0);
         statusBar->SetStatusText("  ",1);        
@@ -332,27 +332,29 @@ void MyFrame::VwXinit()
     SetMenuBar(m_menuBar);
   
     // -- fluke serial comm
-    st_1=new wxStaticText(this,-1,wxT(""),wxPoint(11,11),wxSize(30,13),wxNO_BORDER|wxTRANSPARENT_WINDOW|wxALIGN_LEFT);
+    st_1=new wxStaticText(this,-1,wxT(""),wxPoint(11,11+MNU_OFFSET),wxSize(30,13),wxNO_BORDER|wxTRANSPARENT_WINDOW|wxALIGN_LEFT);
         st_1->SetLabel(wxT("Serial port setup:"));
-    comboCOM=new wxComboBox(this,ID_COMBO_COM,wxT(""),wxPoint(115,6),wxSize(65,21),0,NULL,wxCB_READONLY);
+    comboCOM=new wxComboBox(this,ID_COMBO_COM,wxT(""),
+                  wxPoint(115,6),wxSize(CB_COM_WIDTH,21),
+                  0,NULL,wxCB_READONLY);
+    comboBaud=new wxComboBox(this,ID_COMBO_BAUD,wxT(""),
+                  wxPoint(125+CB_COM_WIDTH,6),wxSize(CB_BAUD_WIDTH,21),
+                  0,NULL,wxCB_READONLY);
     #ifdef __WIN32__
     comboCOM->SetToolTip("The serial port to which the optical cable is connected");
-    #endif
-    comboBaud=new wxComboBox(this,ID_COMBO_BAUD,wxT(""),wxPoint(190,6),wxSize(80,21),0,NULL,wxCB_READONLY);
-    #ifdef __WIN32__
     comboBaud->SetToolTip("Highest baud rate to use which works reliably with the optical cable");
     #endif
     btnReconnect=new wxButton(this,ID_BTN_RECONNECT,wxT(""),
-        wxPoint(280,6),wxSize(65,21));
+        wxPoint(135+CB_COM_WIDTH+CB_BAUD_WIDTH,6+MNU_OFFSET),wxSize(65,21));
         btnReconnect->SetLabel(wxT("Connect"));
         btnReconnect->SetTitle(wxT("Connect"));
 
-    st_2=new wxStaticText(this,-1,wxT(""),wxPoint(11,35),wxSize(30,13),wxNO_BORDER|wxTRANSPARENT_WINDOW|wxALIGN_LEFT);
+    st_2=new wxStaticText(this,-1,wxT(""),wxPoint(11,35+MNU_OFFSET),wxSize(30,13),wxNO_BORDER|wxTRANSPARENT_WINDOW|wxALIGN_LEFT);
         st_2->SetLabel(wxT("Fluke ScopeMeter:"));
-    stFlukeID=new wxStaticText(this,-1,wxT(""),wxPoint(115,35),wxSize(130,19),wxNO_BORDER|wxTRANSPARENT_WINDOW|wxALIGN_LEFT);
+    stFlukeID=new wxStaticText(this,-1,wxT(""),wxPoint(115,35+MNU_OFFSET),wxSize(130,19),wxNO_BORDER|wxTRANSPARENT_WINDOW|wxALIGN_LEFT);
         stFlukeID->SetLabel(wxT("<not detected>"));
 
-    nbNote=new wxNotebook(this,-1,wxPoint(6,60),
+    nbNote=new wxNotebook(this,-1,wxPoint(6,60+MNU_OFFSET),
         wxSize((155+FLUKESCREEN_WIDTH),(45+FLUKESCREEN_HEIGHT)));
         nbNote->SetTitle(wxT("State"));
 
@@ -460,6 +462,10 @@ void MyFrame::VwXinit()
         combo_portIDs[i] = i;
         comboCOM->Append(wxString::Format("/dev/ttyS%d",i).c_str(), &combo_portIDs[i]);
     }
+    for (int i=8; i<16 && i<MAX_COMPORT_COUNT; ++i) {
+        combo_portIDs[i] = i;
+        comboCOM->Append(wxString::Format("/dev/ttyUSB%d",(i-8)).c_str(), &combo_portIDs[i]);
+    }    
     #endif
 
     // next, add ScopeMeter supported baud rates
@@ -649,7 +655,7 @@ void MyFrame::ChangeComPort()
 {
     bool ret;
     bool respOk;
-    wxString response;
+    wxString response, str;
     int  idx, port, baud, user_baud, prev_baud;
 
     // starting baud rate (1200 or previous user baud rate)
@@ -669,6 +675,9 @@ void MyFrame::ChangeComPort()
     idx = comboCOM->GetSelection();
     if ( NULL==comboCOM->GetClientData(idx) ) return;
     port = *(int*)comboCOM->GetClientData(idx);
+    #ifndef __WIN32__
+    wxString portstr = comboCOM->GetString(idx);
+    #endif
     
     // also get the desired baud rate
     idx = comboBaud->GetSelection();
@@ -687,18 +696,25 @@ void MyFrame::ChangeComPort()
         tmrToggleRTS->Stop();
         CurrRxString.Clear();
         ReceivedStrings.Clear();
-        ret = mySerial->openPort(port, baud, 8, ONESTOPBIT, 'N', 0, " ");
+        
+        #ifdef __WIN32__
+        ret = mySerial->openPort(port, baud, 8, ONESTOPBIT, 'N', 0, NULL);
+        str = wxString::Format("COM%d @ %d baud",port, baud);
+        statusBar->SetStatusText(str,0);
+        #else
+        ret = mySerial->openPort(0xFF, baud, 8, ONESTOPBIT, 'N', 0, portstr.c_str());
+        str = wxString::Format(portstr+" @ %d baud",baud);
+        statusBar->SetStatusText(str,0);        
+        #endif
 
         if(false==ret) {
             // port open failed
-            statusBar->SetStatusText(wxString::Format("COM%d @ %d baud",port, baud),0);
             statusBar->SetStatusText(wxString::Format("system error 0x%04lX",mySerial->getLastError()),1);
-            txtSerialTrace->AppendText(wxString::Format("Port open: system error 0x%04lX\r\n",mySerial->getLastError()));
+            txtSerialTrace->AppendText(wxString::Format(str + " open: system error 0x%04lX\r\n",mySerial->getLastError()));
             break;  
         } 
 
         txtSerialTrace->AppendText(wxString::Format("PC set to %d baud\r\n", baud));
-        statusBar->SetStatusText(wxString::Format("COM%d @ %d baud", port, baud),0);
         statusBar->SetStatusText("checking...",1);
 
         // init circuit supply voltage 'generator'
@@ -708,6 +724,7 @@ void MyFrame::ChangeComPort()
         SleepEx(400,FALSE);
         #else
         // linux task_sleep()
+        sleep(400);
         #endif
         
         DoEvents();
@@ -1734,6 +1751,7 @@ wxString MyFrame::GetFlukeResponse(DWORD msTimeout)
             SleepEx(200,FALSE);
             #else
             // linux task_sleep()
+            sleep(200);
             #endif
             DoEvents();
             // check receiver activity - did OnCommEvent() set the flag?
