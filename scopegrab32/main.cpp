@@ -101,6 +101,8 @@
 // ***   If not, use the DevC++ Tools=>Packet Manager to remove the     ***
 // ***   new DevPak and then install the 2.4.2 one.                     ***
 // ***                                                                  ***
+// ***   Editor settings: spaces for tabs, tabsize 3                    ***
+// ***                                                                  ***
 // ************************************************************************
 
 #include "main.h"
@@ -212,7 +214,7 @@ bool MyApp::OnInit()
 	frameMain->SetIcon(progIcon);
 	frameMain->Show(true);
 	// success: wxApp::OnRun() will be called which will enter the main message
-	// loop and the application will run. If we returned FALSE here, the
+	// loop and the application will run. If we returned 'false' here, the
 	// application would exit immediately.
 	return true;
 }
@@ -564,7 +566,7 @@ void MyFrame::ResetModeldependendGUI()
 //
 // Safe GUI handling, enable or disable the input controls
 //
-void MyFrame::GUI_State(BOOL on)
+void MyFrame::GUI_State(bool on)
 {
     comboBaud->Enable(on); comboCOM->Enable(on);
     m_menuBar->EnableTop(0,on);
@@ -627,7 +629,7 @@ void MyFrame::evtChangeComPort(wxCommandEvent& event)
 {
     // call ChangeComPort() to apply the settings, but skip
     // duplicate events
-    static BOOL firstCall = true;
+    static bool firstCall = true;
     if ( true==firstCall ) { this->ChangeComPort(); }
     firstCall = !firstCall;
 }
@@ -641,8 +643,8 @@ void MyFrame::evtChangeComPort(wxCommandEvent& event)
 
 void MyFrame::ChangeComPort()
 {
-    BOOL ret;
-    BOOL respOk;
+    bool ret;
+    bool respOk;
     wxString response;
     int  idx, port, baud, user_baud, prev_baud;
 
@@ -827,7 +829,7 @@ void MyFrame::evtSendCommand(wxCommandEvent& event)
     }
     
     // send the command and dump all response data (can be multiple lines)
-    BOOL respOk;
+    bool respOk;
     GUI_Down();
 
     wxString sendStr = txtCommandToSend->GetValue();
@@ -859,7 +861,7 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
     unsigned int idx;
 
     wxString command="", response = "", strOldBaud="";
-    BOOL respOk=false;
+    bool respOk=false;
 
     // any Fluke there?
     if ( false==bFlukeDetected ) {
@@ -1010,7 +1012,7 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
         // e.g. "0<cr>7454,<epson esc binary data><cr><more data><cr>...
         //
         rxbytesremaining = 0;
-        BOOL dataStart = false;
+        bool dataStart = false;
         wxString newstr = "";
         const char STR_GFXSTART[] = { 0x1B, 0x2A, 0x04, '\0' };
         const int  LEN_STR_GRFXSTART = 3;
@@ -1311,7 +1313,7 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
     int         wave=0;
     void        *queryPtr=NULL;
     wxString    query="", response="";
-    BOOL        respOk=false, gotFullWF=false;
+    bool        respOk=false, gotFullWF=false;
     wxString    matlabStr="", csvStr="", str="", preStr="";
     double      x_offset=0, y_offset=0, delta_x=0, delta_y=0;
     wxString    strXUnit="", strYUnit="";
@@ -1702,7 +1704,7 @@ wxString MyFrame::GetFlukeResponse(DWORD msTimeout)
 {
     wxString response="";
     DWORD cnt;
-    BOOL respIsAscii = false; // flag, True=print response as text to txtSerialTrace
+    bool respIsAscii = false; // flag, True=print response as text to txtSerialTrace
  
     // limits etc checks
     if ( msTimeout<200 || msTimeout>3000 ) { msTimeout=1000; }
@@ -1797,8 +1799,8 @@ wxString MyFrame::GetFlukeResponse(DWORD msTimeout)
 // The remaining response data, if it exists, can be retrieved
 // with GetFlukeResponse
 //
-wxString MyFrame::QueryFluke(wxString cmdString, BOOL bAsciiMode,
-    DWORD msTimeout, BOOL* ResponseIsOK)
+wxString MyFrame::QueryFluke(wxString cmdString, bool bAsciiMode,
+    DWORD msTimeout, bool* ResponseIsOK)
 {
     wxString response;
     

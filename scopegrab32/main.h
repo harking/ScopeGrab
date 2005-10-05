@@ -4,16 +4,19 @@
 // ---- Win32 includes ----
 
 #ifdef __WIN32__
-  #include <windows.h>
+   #include <windows.h>
 #else
-  // TODO: add linux header includes
+   // TODO: add linux header includes
+   #include "linuxport_typedefs.h"
 #endif
 
 // ---- wxWidgets includes ----
 
 #include <wx/wxprec.h>
 
+#ifdef __WIN32__
 #include <wx/msw/winundef.h>
+#endif
 #include <wx/wx.h>
 #include <wx/frame.h>
 #include <wx/image.h>
@@ -37,7 +40,9 @@
 #include <wx/datetime.h>
 #include <wx/config.h>
 #include <wx/html/helpctrl.h>
+#ifdef __WIN32__
 #include <wx/msw/helpchm.h>
+#endif
 
 // ---- other headers ----
 
@@ -107,13 +112,13 @@ extern int fluke_baudrates[];
 
 class MyApp : public wxApp {
 public:
-	// override base class virtuals
-	// ----------------------------
-	// this one is called on application startup and is a good place for the app
-	// initialization (doing it here and not in the ctor allows to have an error
-	// return: if OnInit() returns false, the application terminates)
-	bool OnInit();
-	MyFrame* frameMain;
+   // override base class virtuals
+   // ----------------------------
+   // this one is called on application startup and is a good place for the app
+   // initialization (doing it here and not in the ctor allows to have an error
+   // return: if OnInit() returns false, the application terminates)
+   bool OnInit();
+   MyFrame* frameMain;
 };
 
 
@@ -123,131 +128,130 @@ class MyFrame : public wxFrame
 {
 public:
 
-    MyFrame(wxWindow* parent, wxWindowID id, const wxString& title,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = wxCAPTION|wxMINIMIZE_BOX|wxMAXIMIZE_BOX|wxSYSTEM_MENU|wxWANTS_CHARS,
-        const wxString& name = wxT("frame"));
-    ~MyFrame();
-    void VwXinit();
+   MyFrame(wxWindow* parent, wxWindowID id, const wxString& title,
+      const wxPoint& pos = wxDefaultPosition,
+      const wxSize& size = wxDefaultSize,
+      long style = wxCAPTION|wxMINIMIZE_BOX|wxMAXIMIZE_BOX|wxSYSTEM_MENU|wxWANTS_CHARS,
+      const wxString& name = wxT("frame"));
+   ~MyFrame();
+   void VwXinit();
 
-    void        OnCommEvent(const BYTE* rxbuf, const DWORD rxbytes);
-    void        DoEvents(void);
+   void        OnCommEvent(const BYTE* rxbuf, const DWORD rxbytes);
+   void        DoEvents(void);
 
-    wxString    GetFlukeResponse(DWORD msTimeout);
-    wxString    QueryFluke(wxString cmdString, BOOL bAsciiMode, DWORD msTimeout, BOOL* ResponseIsOK);
+   wxString    GetFlukeResponse(DWORD msTimeout);
+   wxString    QueryFluke(wxString cmdString, bool bAsciiMode, DWORD msTimeout, bool* ResponseIsOK);
 
 private:
 
-    // -- GUI safety funcs
-    void        GUI_Down();
-    void        GUI_Up();
-    void        GUI_State(BOOL on);
+   // -- GUI safety funcs
+   void        GUI_Down();
+   void        GUI_Up();
+   void        GUI_State(bool on);
 
-    // -- internal vars init
-    void        initBefore();
-    void        ResetModeldependendGUI();
- 
-    // -- event handlers
-    // menu
-    void        OnMenuExit(wxMenuEvent& event);
-    void        OnMenuAbout(wxMenuEvent& event);
-    void        OnMenuGuide(wxMenuEvent& event);
-    // serial port selection
-    void        evtChangeComPort(wxCommandEvent& event);
-    void        evtReconnect(wxCommandEvent& event);
-    void        ChangeComPort();
-    // button clicks
-    void        evtSendCommand(wxCommandEvent& event);
-    void        evtGetScreenshot(wxCommandEvent& event);
-    void        evtClipboardImage(wxCommandEvent& event);
-    void        evtSaveImage(wxCommandEvent& event);
-    void        evtSavePostscript(wxCommandEvent& event);
-    void        evtGetWaveform(wxCommandEvent& event);
-    // timer events
-    void        evtRtsTimer(wxTimerEvent& event);  // toggles the RTS pin to generate negative rail
-    void        evtTaskTimer(wxTimerEvent& event); // executes tasks after window creation
-    // key press
-    void        evtKeyDown(wxKeyEvent& event);
+   // -- internal vars init
+   void        initBefore();
+   void        ResetModeldependendGUI();
 
-    // -- GUI components
-    wxMenuBar   *m_menuBar;
-    wxMenu      *m_menuFile;
-    wxMenu      *m_menuSettings;
-    wxMenu      *m_menuHelp;
-    wxStatusBar *statusBar;
-    wxMenuItem  *m_menuNoBaudWarn;
-    
-    wxComboBox  *comboCOM;
-    wxComboBox  *comboBaud;
- 
-    wxNotebook  *nbNote;;
-    wxPanel     *pnlCapture;
-    wxPanel     *pnlConsole;
-    wxPanel     *pnlTools;
+   // -- event handlers
+   // menu
+   void        OnMenuExit(wxMenuEvent& event);
+   void        OnMenuAbout(wxMenuEvent& event);
+   void        OnMenuGuide(wxMenuEvent& event);
+   // serial port selection
+   void        evtChangeComPort(wxCommandEvent& event);
+   void        evtReconnect(wxCommandEvent& event);
+   void        ChangeComPort();
+   // button clicks
+   void        evtSendCommand(wxCommandEvent& event);
+   void        evtGetScreenshot(wxCommandEvent& event);
+   void        evtClipboardImage(wxCommandEvent& event);
+   void        evtSaveImage(wxCommandEvent& event);
+   void        evtSavePostscript(wxCommandEvent& event);
+   void        evtGetWaveform(wxCommandEvent& event);
+   // timer events
+   void        evtRtsTimer(wxTimerEvent& event);  // toggles the RTS pin to generate negative rail
+   void        evtTaskTimer(wxTimerEvent& event); // executes tasks after window creation
+   // key press
+   void        evtKeyDown(wxKeyEvent& event);
 
-    wxTextCtrl  *txtSerialTrace;
-    wxTextCtrl  *txtCommandToSend;
-    wxButton    *btnSendCommand;
+   // -- GUI components
+   wxMenuBar   *m_menuBar;
+   wxMenu      *m_menuFile;
+   wxMenu      *m_menuSettings;
+   wxMenu      *m_menuHelp;
+   wxStatusBar *statusBar;
+   wxMenuItem  *m_menuNoBaudWarn;
 
-    wxStaticText *st_1;
-    wxStaticText *st_2;
-    wxStaticText *st_3;
-    wxStaticText *stFlukeID;
+   wxComboBox  *comboCOM;
+   wxComboBox  *comboBaud;
 
-    wxButton       *btnGetScreenshot;
-    wxButton       *btnCopyScreenshot;
-    wxButton       *btnSaveScreenshot;
-    wxButton       *btnSavePostscript;
-    wxButton       *btnReconnect;
+   wxNotebook  *nbNote;;
+   wxPanel     *pnlCapture;
+   wxPanel     *pnlConsole;
+   wxPanel     *pnlTools;
 
-    wxStaticText   *st_4;
-    wxComboBox     *comboWaveforms;
-    wxButton       *btnGetWaveform;
-    wxTextCtrl     *txtWavestring;
+   wxTextCtrl  *txtSerialTrace;
+   wxTextCtrl  *txtCommandToSend;
+   wxButton    *btnSendCommand;
 
-    wxStaticBitmap *sbmpScreenshot;    // image painted to the display
-    wxImage        *imgScreenshot;     // actual image content
-    BOOL           bGotScreenshot;     // TRUE when image contains a screenshot
-    volatile BOOL  bEscKey;            // TRUE after user presses 'ESC'
-    wxString       strPostscript;      // postscript version of the image
-    wxString       strPrevSavePath;    // previous path used when saving file
-    int            mScopemeterType;    // detected scopemeter, default: SCOPEMETER_NONE
-    wxString       strScopemeterID;    // the ID string returned by the SM
-    BOOL           bFlukeDetected;
+   wxStaticText *st_1;
+   wxStaticText *st_2;
+   wxStaticText *st_3;
+   wxStaticText *stFlukeID;
 
-    
-    // -- serial communications
-    CSerial        *mySerial;               // serial port class
-    wxArrayString  ReceivedStrings;         // array of received ascii test lines
-    wxString       CurrRxString;            // local rx buffer
-    volatile BOOL  bRxReceiverActive;       // activity flag for timing out rx operations
-    BOOL           bRxAsciiMode;            // how to handle incoming data
-    BOOL           bRxBinarymodeAfterACK;   // receive ack in ASCII, further data in binary
-    DWORD          RxErrorCounter;          // count for all rx errors
-    DWORD          RxTotalBytecount;        // for debug or statistics
-    wxTimer*       tmrToggleRTS;            // timer for generating optical cable circuit voltage supplies
-    wxCriticalSection csRxBuf;
-    
-    // -- program config file
-    wxConfig*      mConfigs;                // for storing/loading user selections
+   wxButton       *btnGetScreenshot;
+   wxButton       *btnCopyScreenshot;
+   wxButton       *btnSaveScreenshot;
+   wxButton       *btnSavePostscript;
+   wxButton       *btnReconnect;
 
-    wxTimer*       tmrPostTasks;            // for scheduling tasks after window startup
-    int            posttask;                // type of -"- task
-        
-    #ifdef __WIN32__
-    wxCHMHelpController *m_helpFile;        // program help file, CHM in Windows
-    #else
-    wxHtmlHelpController *m_helpFile;       // program help file, hhp in Linux
-    #endif
-    
-    // -- event table
-    // see start of main.cpp for the event mappings
-    DECLARE_EVENT_TABLE()
-    #define VwX_INIT_OBJECTS_MyFrame
+   wxStaticText   *st_4;
+   wxComboBox     *comboWaveforms;
+   wxButton       *btnGetWaveform;
+   wxTextCtrl     *txtWavestring;
+
+   wxStaticBitmap *sbmpScreenshot;    // image painted to the display
+   wxImage        *imgScreenshot;     // actual image content
+   bool           bGotScreenshot;     // TRUE when image contains a screenshot
+   volatile bool  bEscKey;            // TRUE after user presses 'ESC'
+   wxString       strPostscript;      // postscript version of the image
+   wxString       strPrevSavePath;    // previous path used when saving file
+   int            mScopemeterType;    // detected scopemeter, default: SCOPEMETER_NONE
+   wxString       strScopemeterID;    // the ID string returned by the SM
+   bool           bFlukeDetected;
+
+
+   // -- serial communications
+   CSerial        *mySerial;               // serial port class
+   wxArrayString  ReceivedStrings;         // array of received ascii test lines
+   wxString       CurrRxString;            // local rx buffer
+   volatile bool  bRxReceiverActive;       // activity flag for timing out rx operations
+   bool           bRxAsciiMode;            // how to handle incoming data
+   bool           bRxBinarymodeAfterACK;   // receive ack in ASCII, further data in binary
+   DWORD          RxErrorCounter;          // count for all rx errors
+   DWORD          RxTotalBytecount;        // for debug or statistics
+   wxTimer*       tmrToggleRTS;            // timer for generating optical cable circuit voltage supplies
+   wxCriticalSection csRxBuf;
+
+   // -- program config file
+   wxConfig*      mConfigs;                // for storing/loading user selections
+
+   wxTimer*       tmrPostTasks;            // for scheduling tasks after window startup
+   int            posttask;                // type of -"- task
+
+   #ifdef __WIN32__
+   wxCHMHelpController *m_helpFile;        // program help file, CHM in Windows
+   #else
+   wxHtmlHelpController *m_helpFile;       // program help file, hhp in Linux
+   #endif
+
+   // -- event table
+   // see start of main.cpp for the event mappings
+   DECLARE_EVENT_TABLE()
+   #define VwX_INIT_OBJECTS_MyFrame
 
 };
 
 
 #endif
-

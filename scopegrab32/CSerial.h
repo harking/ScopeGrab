@@ -1,9 +1,14 @@
 #ifndef _CSERIAL_H
 #define _CSERIAL_H
 
-#include <windows.h>
 #include <sstream>
-#include <process.h>
+#ifdef __WIN32__
+   #include <windows.h>
+   #include <process.h>
+#else
+   #include "linuxport_typedefs.h"
+#endif
+
 
 // client class with a public OnCommEvent() for callback
 class MyFrame;
@@ -19,53 +24,52 @@ extern DWORD ReceiverFunc(LPVOID hostClass);
 class CSerial {
 
 public:
-	CSerial(MyFrame* clientFrmMain);
-	virtual ~CSerial();
+   CSerial(MyFrame* clientFrmMain);
+   virtual ~CSerial();
 
-    // user accessible funcs
+   // user accessible funcs
 public:
-	BOOL openPort(BYTE portnum, DWORD baudrate,
-            BYTE databits, BYTE stopbits,
-            BYTE parity, BYTE handshaking);
-	BOOL isOpen();
-	BOOL closePort();
+   bool openPort(BYTE portnum, DWORD baudrate,
+         BYTE databits, BYTE stopbits,
+         BYTE parity, BYTE handshaking);
+   bool isOpen();
+   bool closePort();
 
-	BOOL  setBaudrate(DWORD baudrate);
-    DWORD getBaudrate();
-	BOOL  setDatabits(BYTE databits);
-	BOOL  setStopbits(BYTE stopbits);
+   bool  setBaudrate(DWORD baudrate);
+   DWORD getBaudrate();
+   bool  setDatabits(BYTE databits);
+   bool  setStopbits(BYTE stopbits);
 
-	BOOL transmitData(const BYTE* databuf, const DWORD bytecount);
+   bool transmitData(const BYTE* databuf, const DWORD bytecount);
 
-	BOOL getDTR();
-	BOOL setDTR(BOOL switchOn);
-	BOOL getRTS();
-	BOOL setRTS(BOOL switchOn);
+   bool getDTR();
+   bool setDTR(bool switchOn);
+   bool getRTS();
+   bool setRTS(bool switchOn);
 
-    void  clearCommErrors();
-    DWORD getModembits();
-	
-	DWORD getLastError() { return m_PreviousError; }
-	
-    // public vars for the receiver thread/function to access
+   void  clearCommErrors();
+   DWORD getModembits();
+
+   DWORD getLastError() { return m_PreviousError; }
+
+   // public vars for the receiver thread/function to access
 public:
-	struct MyFrame*  frmMain; // for accessing the callback OnCommEvent() func
-	volatile HANDLE  m_portHdl;
-	HANDLE           m_hdl_RxThread;
-    volatile BOOL    m_RxThread_Running;
-    volatile BOOL    m_RxThread_Shutdown;
-    DWORD            m_RxThread_ID;
-	OVERLAPPED       m_overlapRx;
-	HANDLE           m_evtRead;
-	OVERLAPPED       m_overlapTx;
-	HANDLE           m_evtWrite;
+   struct MyFrame*  frmMain; // for accessing the callback OnCommEvent() func
+   volatile HANDLE  m_portHdl;
+   HANDLE           m_hdl_RxThread;
+   volatile BOOL    m_RxThread_Running;
+   volatile BOOL    m_RxThread_Shutdown;
+   DWORD            m_RxThread_ID;
+   OVERLAPPED       m_overlapRx;
+   HANDLE           m_evtRead;
+   OVERLAPPED       m_overlapTx;
+   HANDLE           m_evtWrite;
 
 private:
-	BOOL             m_DTRon;
-	BOOL             m_RTSon;
-	DWORD            m_PreviousError;
+   bool             m_DTRon;
+   bool             m_RTSon;
+   DWORD            m_PreviousError;
 
 };
 
 #endif // _CSERIAL_H
-
