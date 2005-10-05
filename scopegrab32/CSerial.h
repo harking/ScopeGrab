@@ -6,7 +6,11 @@
    #include <windows.h>
    #include <process.h>
 #else
-   #include "linuxport_typedefs.h"
+   // use http://www.easysw.com/~mike/serial/serial.html
+   #include "linux_typedefs.h"
+   #include <termios.h>
+   #define ONESTOPBIT 0
+   #define TWOSTOPBIT CSTOPB
 #endif
 
 
@@ -57,12 +61,14 @@ public:
    struct MyFrame*  frmMain; // for accessing the callback OnCommEvent() func
    volatile HANDLE  m_portHdl;
    HANDLE           m_hdl_RxThread;
-   volatile BOOL    m_RxThread_Running;
-   volatile BOOL    m_RxThread_Shutdown;
+   volatile bool    m_RxThread_Running;
+   volatile bool    m_RxThread_Shutdown;
    DWORD            m_RxThread_ID;
+   #ifdef __WIN32__
    OVERLAPPED       m_overlapRx;
-   HANDLE           m_evtRead;
    OVERLAPPED       m_overlapTx;
+   #endif
+   HANDLE           m_evtRead;
    HANDLE           m_evtWrite;
 
 private:

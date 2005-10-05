@@ -335,9 +335,13 @@ void MyFrame::VwXinit()
     st_1=new wxStaticText(this,-1,wxT(""),wxPoint(11,11),wxSize(30,13),wxNO_BORDER|wxTRANSPARENT_WINDOW|wxALIGN_LEFT);
         st_1->SetLabel(wxT("Serial port setup:"));
     comboCOM=new wxComboBox(this,ID_COMBO_COM,wxT(""),wxPoint(115,6),wxSize(65,21),0,NULL,wxCB_READONLY);
+    #ifdef __WIN32__
     comboCOM->SetToolTip("The serial port to which the optical cable is connected");
+    #endif
     comboBaud=new wxComboBox(this,ID_COMBO_BAUD,wxT(""),wxPoint(190,6),wxSize(80,21),0,NULL,wxCB_READONLY);
+    #ifdef __WIN32__
     comboBaud->SetToolTip("Highest baud rate to use which works reliably with the optical cable");
+    #endif
     btnReconnect=new wxButton(this,ID_BTN_RECONNECT,wxT(""),
         wxPoint(280,6),wxSize(65,21));
         btnReconnect->SetLabel(wxT("Connect"));
@@ -454,7 +458,7 @@ void MyFrame::VwXinit()
     // serial port listing for linux
     for (int i=0; i<8 && i<MAX_COMPORT_COUNT; ++i) {
         combo_portIDs[i] = i;
-        comboCOM->Append(wxString::Format("/dev/ttyS%d",i).c_str(), &combo_portIDs[portCnt])
+        comboCOM->Append(wxString::Format("/dev/ttyS%d",i).c_str(), &combo_portIDs[i]);
     }
     #endif
 

@@ -7,7 +7,7 @@
    #include <windows.h>
 #else
    // TODO: add linux header includes
-   #include "linuxport_typedefs.h"
+   #include "linux_typedefs.h"
 #endif
 
 // ---- wxWidgets includes ----
