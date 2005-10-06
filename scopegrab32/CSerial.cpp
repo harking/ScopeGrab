@@ -56,7 +56,7 @@ CSerial::~CSerial() {
 bool CSerial::openPort(
    BYTE portnum, DWORD baudrate,
    BYTE databits, BYTE stopbits,
-   BYTE parity, BYTE handshaking, char* portStr ) {
+   BYTE parity, BYTE handshaking, const char* portStr ) {
 
    // check for parameters for valid range
    if ( portnum<1 || portnum>64 ) return false;
