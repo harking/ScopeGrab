@@ -24,6 +24,7 @@
 #else
    // TODO: add linux header includes
    #include "linux_typedefs.h"
+   #include <unistd.h>   
 #endif
 
 // ---- wxWidgets includes ----

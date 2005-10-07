@@ -87,14 +87,15 @@ public:
    OVERLAPPED       m_overlapRx;
    OVERLAPPED       m_overlapTx;
    HANDLE           m_hdl_RxThread;
-   volatile HANDLE  m_portHdl;
+   volatile HANDLE m_portHdl;
+   HANDLE           m_evtRead;
+   HANDLE           m_evtWrite;
    #else
    int               m_portHdl;
    struct termios    m_serialopt;
+   pthread_t         m_RxThread;
    pthread_t*        m_hdl_RxThread;
    #endif
-   HANDLE           m_evtRead;
-   HANDLE           m_evtWrite;
 
 private:
    bool             m_DTRon;
@@ -103,6 +104,8 @@ private:
 
    #ifndef __WIN32__
    int   baudToValue(unsigned int baud);
+   unsigned int valueToBaud(int value);
+   static void ReceiverThread(void* hostClass);
    #endif
 };
 

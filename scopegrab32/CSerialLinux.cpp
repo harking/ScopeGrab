@@ -43,8 +43,6 @@
 #include "CSerial.h"
 #include "main.h"
 
-
-
 // ****************************************************************
 // *  C'stor
 // *
@@ -141,7 +139,11 @@ bool CSerial::openPort(
    fcntl(m_portHdl, F_SETFL, 0); // use a blocking read()
 
    // port was opened, get properties block
-   tcgetattr(m_portHdl, &m_serialopt);
+   if ( -1==tcgetattr(m_portHdl, &m_serialopt) ) {
+      m_PreviousError = errno;
+      perror("openPort() tcgetattr");
+      return false;
+   }
 
    // adjust databits, stopbits, parity suitable
    // for scopegrab ('8N1')
@@ -189,6 +191,7 @@ bool CSerial::openPort(
    tcflush(m_portHdl,TCIFLUSH);
    if ( -1==tcsetattr(m_portHdl, TCSANOW, &m_serialopt) ) {
       m_PreviousError = errno;
+      perror("openPort() tcsetattr");
       close(m_portHdl);
       return false;
    }   
@@ -200,22 +203,25 @@ bool CSerial::openPort(
    pthread_attr_t attr;
    if ( pthread_attr_init(&attr) ) {
       m_PreviousError = errno;
+      perror("openPort() phtread_attr_init");
       close(m_portHdl);
       return false;
    }
 
+   m_hdl_RxThread = &m_RxThread;
    i = pthread_create(m_hdl_RxThread, &attr,
-         (void*(*)(void*))ReceiverFunc,
+         (void*(*)(void*))&ReceiverThread,
          this // pass current CSerial object as param (for callback)
       );
 
    // if starting the thread failed, close the port
    if ( i ) {
       m_PreviousError = errno;
+      perror("openPort() pthread_create");
       close(m_portHdl);
       return false;
    }
-   
+
    // seems like everything went fine
    return true;
 }
@@ -266,9 +272,9 @@ bool CSerial::closePort() {
       m_serialopt.c_cc[VTIME] = 1;  // wait 1x0,1s
       tcsetattr(m_portHdl, TCSANOW, &m_serialopt);      
       
-      // give the thread a while to terminate
+      // give the thread a while to terminate by itself (1s=20*50ms)
       for ( int k=0; (true==this->m_RxThread_Shutdown) && k<20; ++k ) {
-         sleep(50);
+         usleep(50000);
          frmMain->DoEvents();
       }
 
@@ -295,54 +301,54 @@ bool CSerial::closePort() {
 
 
 // ****************************************************************
-// *  DWORD ReceiverFunc(LPVOID hostClass)
+// *  void ReceiverThread(void* hostClass)
 // *
 // *  Separate thread for receiving serial port data. Don't
 // *  call this directly! Does not exit until signaled
 // *  to do so with CSerial::m_RxThread_Shutdown = true.
 // *
-// *  Arguments: pointer to the host CSerial class
+// *  Arguments: host class
 // *
 // *  Returns: 0 when signaled to exit
 
-DWORD ReceiverFunc(LPVOID hostClass) {
+void CSerial::ReceiverThread(void* hostClass) {
 
    // local buffer for the received bytes
    BYTE  rxbuf[MAX_IN_BUFFER+1];
    int   bytesread = 0;
 
-   // get host class (of type CSerial)
-   CSerial* ptrHost = (CSerial*)hostClass;
-
+   // get host class
+   if ( NULL==hostClass ) { pthread_exit(0); }
+   CSerial* host = (CSerial*)hostClass;   
+   
    // thread started, set the info flags
-   ptrHost->m_RxThread_Running = true;
-   ptrHost->m_RxThread_Shutdown = false;
-
+   host->m_RxThread_Running = true;
+   host->m_RxThread_Shutdown = false;
+   
    // allow asynchronous (immediate) cancelling of this thread
    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
-   
+      
    // receive chars, until thread is told to terminate
-   while ( false==ptrHost->m_RxThread_Shutdown ) {
-
+   while ( false==host->m_RxThread_Shutdown ) {
+   
       // get more bytes (blocking call)
-      bytesread = read(ptrHost->m_portHdl, rxbuf, MAX_IN_BUFFER);
-
+      bytesread = read(host->m_portHdl, rxbuf, MAX_IN_BUFFER);
+   
       if (bytesread>0) {
          // forward data to the client application
-         if (ptrHost->frmMain != NULL) {
-            ptrHost->frmMain->OnCommEvent((const BYTE*)rxbuf, (const DWORD)bytesread);
+         if (host->frmMain != NULL) {
+            host->frmMain->OnCommEvent((const BYTE*)rxbuf, (const DWORD)bytesread);
          }
       }
       
    }
-
+   
    // Exited the receiver loop because m_RxThread_Shutdown was set to true
    // Set it back to false to indicate that the thread has closed now.
-   ptrHost->m_RxThread_Shutdown = false;
-   ptrHost->m_RxThread_Running = false;
+   host->m_RxThread_Shutdown = false;
+   host->m_RxThread_Running = false;
 
    pthread_exit(0);
-   return 0;
 }
 
 
@@ -362,7 +368,7 @@ bool CSerial::transmitData(const BYTE* databuf, const DWORD bytecount) {
    unsigned int written = 0;
 
    m_PreviousError = 0;
-
+  
    // can transmit only on opened port
    if ( false==isOpen() ) return false;
 
@@ -374,6 +380,7 @@ bool CSerial::transmitData(const BYTE* databuf, const DWORD bytecount) {
    if ( written<bytecount ) {
       if ( written<0 ) {
          m_PreviousError = errno;
+         perror("transmitData()");
       }
       return false;
    }
@@ -681,6 +688,39 @@ int CSerial::baudToValue(unsigned int baud) {
          return B38400;
       case 57600:
          return B57600;
+      default:
+         return 0;
+   }
+}
+
+
+// ****************************************************************
+// *  unsigned int valueToBaud(val)
+// *
+// *  Returns: converts posix baud rate constant into corresponding
+// *           integer baud rate
+// *
+
+unsigned int CSerial::valueToBaud(int value) {
+   switch(value) {
+      case B300:
+         return 300;
+      case B600:
+         return 600;
+      case B1200:
+         return 1200;
+      case B2400:
+         return 2400;
+      case B4800:
+         return 4800;
+      case B9600:
+         return 9600;
+      case B19200:
+         return 19200;
+      case B38400:
+         return 38400;
+      case B57600:
+         return 57600;
       default:
          return 0;
    }
