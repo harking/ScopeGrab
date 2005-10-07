@@ -123,7 +123,7 @@ BEGIN_EVENT_TABLE(MyFrame,wxFrame)
     EVT_MENU(ID_MENU_ABOUT,MyFrame::OnMenuAbout)
     EVT_MENU(ID_MENU_USRSGUIDE,MyFrame::OnMenuGuide)
     EVT_MENU(ID_MENU_EXIT,MyFrame::OnMenuExit)
-  
+
     EVT_COMBOBOX(ID_COMBO_COM,MyFrame::evtChangeComPort)
     EVT_COMBOBOX(ID_COMBO_BAUD,MyFrame::evtChangeComPort)
   
@@ -1590,7 +1590,7 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
 //
 // Menu: display the About dialog
 //
-void MyFrame::OnMenuAbout(wxMenuEvent& event)
+void MyFrame::OnMenuAbout(SG32_MENU_EVT_TYPE event)
 {
     // Show prog and version info (cf. ScopeGrab32_private.h and/or project settings)
     wxMessageBox(wxString(PRODUCT_NAME)+wxString(" ")+wxString(FILE_VERSION)+
@@ -1609,7 +1609,7 @@ void MyFrame::OnMenuAbout(wxMenuEvent& event)
 //
 // Menu: display the help file
 //
-void MyFrame::OnMenuGuide(wxMenuEvent& event)
+void MyFrame::OnMenuGuide(SG32_MENU_EVT_TYPE event)
 {
     m_helpFile->DisplayContents();
 }
@@ -1617,7 +1617,7 @@ void MyFrame::OnMenuGuide(wxMenuEvent& event)
 //
 // Menu: exit the program
 //
-void MyFrame::OnMenuExit(wxMenuEvent& event)
+void MyFrame::OnMenuExit(SG32_MENU_EVT_TYPE event)
 {
     // close serial comms
     tmrToggleRTS->Stop();
@@ -1746,7 +1746,11 @@ wxString MyFrame::GetFlukeResponse(DWORD msTimeout)
     if ( itemCount>0 ) {
 
         response = ReceivedStrings.Item(itemCount-1); // get last
+        #if wxCHECK_VERSION(2,6,0)
+        ReceivedStrings.RemoveAt(itemCount-1, 1); // remove from end
+        #else
         ReceivedStrings.Remove(itemCount-1, 1); // remove from end
+        #endif
         respIsAscii = true;
 
     // wait for new response data to come in...
@@ -1784,7 +1788,11 @@ wxString MyFrame::GetFlukeResponse(DWORD msTimeout)
             // then return it first!
             if ( itemCount>0 ) {
                 response = ReceivedStrings.Item(itemCount-1); // get last
+                #if wxCHECK_VERSION(2,6,0)
+                ReceivedStrings.RemoveAt(itemCount-1, 1); // remove from end
+                #else
                 ReceivedStrings.Remove(itemCount-1, 1); // remove from end
+                #endif
                 respIsAscii = true;
             } else {
                 // just return all currently received bytes
@@ -1804,7 +1812,11 @@ wxString MyFrame::GetFlukeResponse(DWORD msTimeout)
 
             // got at least 1 response string, remove it from array end
             response = ReceivedStrings.Item(itemCount-1); // get last
+            #if wxCHECK_VERSION(2,6,0)
+            ReceivedStrings.RemoveAt(itemCount-1, 1); // remove from end
+            #else
             ReceivedStrings.Remove(itemCount-1, 1); // remove from end
+            #endif
             respIsAscii = true;
             
         }//if(bin/ascii)

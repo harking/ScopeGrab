@@ -57,6 +57,7 @@
 #include <wx/datetime.h>
 #include <wx/config.h>
 #include <wx/html/helpctrl.h>
+#include <wx/version.h>
 #ifdef __WIN32__
 #include <wx/msw/helpchm.h>
 #endif
@@ -182,9 +183,16 @@ private:
 
    // -- event handlers
    // menu
-   void        OnMenuExit(wxMenuEvent& event);
-   void        OnMenuAbout(wxMenuEvent& event);
-   void        OnMenuGuide(wxMenuEvent& event);
+   #if wxCHECK_VERSION(2,6,0)
+      // wxWidgets 2.6.2 and later
+      #define SG32_MENU_EVT_TYPE wxCommandEvent&
+   #else
+      // wxWidgets 2.4.2
+      #define SG32_MENU_EVT_TYPE wxMenuEvent&
+   #endif
+   void        OnMenuExit(SG32_MENU_EVT_TYPE event);
+   void        OnMenuAbout(SG32_MENU_EVT_TYPE event);
+   void        OnMenuGuide(SG32_MENU_EVT_TYPE event);
    // serial port selection
    void        evtChangeComPort(wxCommandEvent& event);
    void        evtReconnect(wxCommandEvent& event);
