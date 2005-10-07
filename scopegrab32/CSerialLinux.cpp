@@ -173,11 +173,12 @@ bool CSerial::openPort(
 
    // configure output options
    m_serialopt.c_oflag &= ~OPOST; // no postprocess, just raw outputting
-   
+
    // set read timing
    m_serialopt.c_cc[VMIN] = 1;   // wait for 1 byte at a time
-   m_serialopt.c_cc[VTIME] = 0;  // blocking wait (no timeout)
-   
+//   m_serialopt.c_cc[VTIME] = 0;  // blocking wait (no timeout)
+   m_serialopt.c_cc[VTIME] = 5; // timeout all 0,5s
+  
    // set the baudrate (convert to Bxxxx constant first)
    baudrate = baudToValue(baudrate);
    cfsetispeed(&m_serialopt, baudrate);
@@ -497,17 +498,23 @@ bool CSerial::setBaudrate(DWORD baudrate) {
    // get the current config
    if ( -1==tcgetattr(m_portHdl, &m_serialopt) ) {
       m_PreviousError = errno;
+      perror("setBaudrate tcgetattr()");
       return false;
    }  
    
-   // write the new baud rate
+   // convert baud to Bxxx value, then write the new baud rate
    baudrate = baudToValue((unsigned int)baudrate);
-   cfsetispeed(&m_serialopt, baudrate);
-   cfsetospeed(&m_serialopt, baudrate);
-   
-   // apply, with data flushing
-   if ( -1==tcsetattr(m_portHdl, TCSAFLUSH, &m_serialopt) ) {
+   if ( -1==cfsetispeed(&m_serialopt, baudrate) ||
+        -1==cfsetospeed(&m_serialopt, baudrate) ) {
       m_PreviousError = errno;
+      perror("setBaudrate cfsetiospeed()");
+      return false;      
+   }
+   
+   // apply
+   if ( -1==tcsetattr(m_portHdl, TCSANOW, &m_serialopt) ) { // TCSAFLUSH
+      m_PreviousError = errno;
+      perror("setBaudrate tcsetattr()");
       return false;      
    }
 
@@ -523,17 +530,21 @@ bool CSerial::setBaudrate(DWORD baudrate) {
 
 DWORD CSerial::getBaudrate() {
    
+   int bvalue = 0;
+   
    // can read only on opened port
    if ( false==isOpen() ) return 0;
 
    // get the current config
    if ( -1==tcgetattr(m_portHdl, &m_serialopt) ) {
       m_PreviousError = errno;
+      perror("getBaudrate()");
       return false;
    }  
 
    // return the baudrate
-   return cfgetospeed(&m_serialopt);
+   bvalue = (int)cfgetospeed(&m_serialopt);
+   return (DWORD)valueToBaud(bvalue);
 }
 
 // ****************************************************************
