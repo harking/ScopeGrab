@@ -365,11 +365,11 @@ void MyFrame::VwXinit()
         nbNote->AddPage(pnlCapture,"Screen capture",false);
         pnlCapture->SetTitle(wxT("Screen capture"));
     imgScreenshot=new wxImage(FLUKESCREEN_WIDTH,FLUKESCREEN_HEIGHT);
+    imgScreenshot->Replace(0,0,0, 0xFF,0xFF,0xFF);
     sbmpScreenshot=new wxStaticBitmap(pnlCapture,ID_SCREENSHOT,
             wxBitmap(imgScreenshot,IMAGE_BITDEPTH),
             wxPoint(5,5),wxSize(FLUKESCREEN_WIDTH,FLUKESCREEN_HEIGHT),
             wxTHICK_FRAME,"sbmpScreenshot");
-    imgScreenshot->Replace(0,0,0, 0xFF,0xFF,0xFF);
     btnGetScreenshot=new wxButton(pnlCapture,ID_BTN_GETSCREENSHOT,wxT(""),
         wxPoint(35+FLUKESCREEN_WIDTH,10),wxSize(90,25));
         btnGetScreenshot->SetLabel(wxT("Get Screen"));
@@ -815,7 +815,11 @@ void MyFrame::ChangeComPort()
                     txtSerialTrace->AppendText("PC baud rate set failed!!\r\n");
                 }
                 tmrToggleRTS->Start(TIMER_TOGGLERATE, false);
+                #ifdef __WIN32__
                 statusBar->SetStatusText(wxString::Format("COM%d @ %d baud",port, baud),0);
+                #else
+                statusBar->SetStatusText(wxString::Format(portstr+" @ %d baud",baud));
+                #endif
                 break;
             } else {
                 txtSerialTrace->AppendText(wxString::Format("Fluke didn't ACK baud rate change. Staying at %d.\r\n",prev_baud));
