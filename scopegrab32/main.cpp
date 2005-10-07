@@ -188,15 +188,16 @@ wxString fluke190wfUnits[FLUKE190_WF_UNITSCOUNT] = {
 // ----------------------------------------------------
 
 void MyFrame::DoEvents() {
-    #ifdef __WIN32__
-	MSG msg;
-	// allow win32 messages through
-    while ( TRUE==::PeekMessage((LPMSG)&msg, NULL, 0, 0, PM_REMOVE) ) {
-       ::TranslateMessage(&msg); ::DispatchMessage(&msg);
-	}
-	#else
-     // linux Yield() ?
-	#endif
+   #ifdef __WIN32__
+   MSG msg;
+   // allow win32 messages through
+   while ( TRUE==::PeekMessage((LPMSG)&msg, NULL, 0, 0, PM_REMOVE) ) {
+      ::TranslateMessage(&msg); ::DispatchMessage(&msg);
+   }
+   #else
+   // linux Yield() ?
+   wxYield();
+   #endif
 }
 
 // ----------------------------------------------------
@@ -637,11 +638,16 @@ void MyFrame::evtReconnect(wxCommandEvent& event)
 //
 void MyFrame::evtChangeComPort(wxCommandEvent& event)
 {
+    #ifdef __WIN32__
     // call ChangeComPort() to apply the settings, but skip
     // duplicate events
     static bool firstCall = true;
     if ( true==firstCall ) { this->ChangeComPort(); }
     firstCall = !firstCall;
+    #else
+    // duplicates skipping not required in linux/X11
+    this->ChangeComPort();
+    #endif
 }
 
 //
@@ -704,7 +710,7 @@ void MyFrame::ChangeComPort()
         #else
         ret = mySerial->openPort(0xFF, baud, 8, ONESTOPBIT, 'N', 0, portstr.c_str());
         str = wxString::Format(portstr+" @ %d baud",baud);
-        statusBar->SetStatusText(str,0);        
+        statusBar->SetStatusText(str,0);
         #endif
 
         if(false==ret) {
@@ -724,7 +730,7 @@ void MyFrame::ChangeComPort()
         SleepEx(400,FALSE);
         #else
         // linux task_sleep()
-        sleep(400);
+        usleep(400000L);
         #endif
         
         DoEvents();
@@ -1726,7 +1732,7 @@ wxString MyFrame::GetFlukeResponse(DWORD msTimeout)
     wxString response="";
     DWORD cnt;
     bool respIsAscii = false; // flag, True=print response as text to txtSerialTrace
- 
+    
     // limits etc checks
     if ( msTimeout<200 || msTimeout>3000 ) { msTimeout=1000; }
     if ( NULL==mySerial || false==mySerial->isOpen() ) { return wxString(""); }
@@ -1751,7 +1757,7 @@ wxString MyFrame::GetFlukeResponse(DWORD msTimeout)
             SleepEx(200,FALSE);
             #else
             // linux task_sleep()
-            sleep(200);
+            usleep(200000L);
             #endif
             DoEvents();
             // check receiver activity - did OnCommEvent() set the flag?
