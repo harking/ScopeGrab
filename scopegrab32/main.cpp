@@ -19,7 +19,7 @@
 // ***  ScopeGrab32 - A tool for the Fluke ScopeMeter series            ***
 // ***  (C) 2004 Jan Wagner                                             ***
 // ***                                                                  ***
-// ***  Version: 2.2.0L alpha                                           ***
+// ***  Version: 2.2.5 alpha (Windows and Linux/Unix support)           ***
 // ***                                                                  ***
 // ***  Licence: GNU GPL                                                ***
 // ***                                                                  ***
@@ -86,7 +86,7 @@
 // ***  the Win32 API serial port functions. Porting to linux should    ***
 // ***  work, if you rewrite the CSerial class.                         ***
 // ***                                                                  ***
-// ***  This source was developed and compiled using:                   ***
+// ***  This source was developed and compiled in WinXP using:          ***
 // ***                                                                  ***
 // ***   a) Dev-C++ 5.0 beta 9                                          ***
 // **       http://www.bloodshed.net/dev/devcpp.html                    ***
@@ -101,7 +101,22 @@
 // ***   If not, use the DevC++ Tools=>Packet Manager to remove the     ***
 // ***   new DevPak and then install the 2.4.2 one.                     ***
 // ***                                                                  ***
+// ***  The Linux and Unix release:                                     ***
+// ***                                                                  ***
+// ***   Use wxGTK (the GTK+ version of wxWidgets) for which you        ***
+// ***   need to download the sources from http://www.wxwidgets.org     ***
+// ***   Unpack wxGTK and configure with ./configure --disable-shared   ***
+// ***   To install, just 'make' and 'make install'.                    ***
+// ***   After wxGTK is installed, compile ScopeGrab32 in its source    ***
+// ***   code folder by running 'make'.                                 ***
+// ***                                                                  ***
+// ***   This ScopeGrab32 code has only been tested with 2.4.2 and      ***
+// ***   2.6.2 of wxGTK. wxX11 and wxUniv is known to not work          ***
+// ***   correctly.                                                     ***
+// ***                                                                  ***
+// ***                                                                  ***
 // ***   Editor settings: spaces for tabs, tabsize 3                    ***
+// ***                                                                  ***
 // ***                                                                  ***
 // ************************************************************************
 
@@ -295,6 +310,8 @@ void MyFrame::VwXinit()
     Show(false);
     SetBackgroundColour(wxSystemSettings::GetColour((wxSystemColour)wxSYS_COLOUR_3DLIGHT));
 
+    wxFont fntSmall = wxFont(8,wxDEFAULT,wxNORMAL,wxNORMAL,false,CONSOLE_FONT,wxFONTENCODING_SYSTEM);
+    
     // -- menu and status bar
     
     statusBar=new wxStatusBar(this,-1,0,"statusBar");
@@ -315,8 +332,8 @@ void MyFrame::VwXinit()
         m_menuSettings->Append(m_menuNoBaudWarn);
         m_menuFile->Append(ID_MENU_SETTINGS,wxT("&Settings"),m_menuSettings);
 
-        m_menuFile->Append(-1,"-","",wxITEM_SEPARATOR);
-        
+        m_menuFile->AppendSeparator();
+    
         m_menuHelp=new wxMenu();
         menuitem = new wxMenuItem(NULL,ID_MENU_USRSGUIDE,wxT("Users &guide"));
         m_menuHelp->Append(menuitem);        
@@ -324,7 +341,7 @@ void MyFrame::VwXinit()
         m_menuHelp->Append(menuitem);
         m_menuFile->Append(ID_MENU_HELP,"&Help",m_menuHelp);
 
-        m_menuFile->Append(-1,"-","",wxITEM_SEPARATOR);
+        m_menuFile->AppendSeparator();
 
         menuitem = new wxMenuItem(NULL,ID_MENU_EXIT,wxT("E&xit"));
         m_menuFile->Append(menuitem);
@@ -333,30 +350,30 @@ void MyFrame::VwXinit()
     SetMenuBar(m_menuBar);
   
     // -- fluke serial comm
-    st_1=new wxStaticText(this,-1,wxT(""),wxPoint(11,11+MNU_OFFSET),wxSize(30,13),wxNO_BORDER|wxTRANSPARENT_WINDOW|wxALIGN_LEFT);
+    st_1=new wxStaticText(this,-1,wxT(""),wxPoint(11,11+MNU_OFFSET),wxSize(60,13),wxNO_BORDER|wxTRANSPARENT_WINDOW|wxALIGN_LEFT);
         st_1->SetLabel(wxT("Serial port setup:"));
     comboCOM=new wxComboBox(this,ID_COMBO_COM,wxT(""),
-                  wxPoint(115,6),wxSize(CB_COM_WIDTH,21),
+                  wxPoint(140,6),wxSize(CB_COM_WIDTH,21),
                   0,NULL,wxCB_READONLY);
     comboBaud=new wxComboBox(this,ID_COMBO_BAUD,wxT(""),
-                  wxPoint(125+CB_COM_WIDTH,6),wxSize(CB_BAUD_WIDTH,21),
+                  wxPoint(150+CB_COM_WIDTH,6),wxSize(CB_BAUD_WIDTH,21),
                   0,NULL,wxCB_READONLY);
     #ifdef __WIN32__
     comboCOM->SetToolTip("The serial port to which the optical cable is connected");
     comboBaud->SetToolTip("Highest baud rate to use which works reliably with the optical cable");
     #endif
     btnReconnect=new wxButton(this,ID_BTN_RECONNECT,wxT(""),
-        wxPoint(135+CB_COM_WIDTH+CB_BAUD_WIDTH,6+MNU_OFFSET),wxSize(65,21));
+        wxPoint(150+CB_COM_WIDTH+CB_BAUD_WIDTH,6+MNU_OFFSET),wxSize(65,21));
         btnReconnect->SetLabel(wxT("Connect"));
         btnReconnect->SetTitle(wxT("Connect"));
 
     st_2=new wxStaticText(this,-1,wxT(""),wxPoint(11,35+MNU_OFFSET),wxSize(30,13),wxNO_BORDER|wxTRANSPARENT_WINDOW|wxALIGN_LEFT);
         st_2->SetLabel(wxT("Fluke ScopeMeter:"));
-    stFlukeID=new wxStaticText(this,-1,wxT(""),wxPoint(115,35+MNU_OFFSET),wxSize(130,19),wxNO_BORDER|wxTRANSPARENT_WINDOW|wxALIGN_LEFT);
+    stFlukeID=new wxStaticText(this,-1,wxT(""),wxPoint(140,35+MNU_OFFSET),wxSize(130,19),wxNO_BORDER|wxTRANSPARENT_WINDOW|wxALIGN_LEFT);
         stFlukeID->SetLabel(wxT("<not detected>"));
 
     nbNote=new wxNotebook(this,-1,wxPoint(6,60+MNU_OFFSET),
-        wxSize((155+FLUKESCREEN_WIDTH),(45+FLUKESCREEN_HEIGHT)));
+        wxSize((145+FLUKESCREEN_WIDTH),(45+FLUKESCREEN_HEIGHT)));
         nbNote->SetTitle(wxT("State"));
 
     // -- screen capture
@@ -394,7 +411,7 @@ void MyFrame::VwXinit()
         pnlTools->SetTitle(wxT("Waves and tools"));
     st_4=new wxStaticText(pnlTools,-1,wxT(""),wxPoint(11,11+4),wxSize(120,13),
         wxNO_BORDER|wxTRANSPARENT_WINDOW|wxALIGN_LEFT);
-    st_4->SetLabel(wxT("Select waveform to download:"));
+    st_4->SetLabel(wxT("Download the waveform:"));
     comboWaveforms=new wxComboBox(pnlTools,-1,wxT(""),wxPoint(160,11),
         wxSize(120,22),0,NULL,wxCB_READONLY);
     btnGetWaveform=new wxButton(pnlTools,ID_BTN_WAVE,wxT(""),
@@ -402,8 +419,8 @@ void MyFrame::VwXinit()
         btnGetWaveform->SetLabel(wxT("Download"));
         btnGetWaveform->SetTitle(wxT("Download")); 
     txtWavestring=new wxTextCtrl(pnlTools,-1,wxT(""),
-        wxPoint(11,35),wxSize(FLUKESCREEN_WIDTH,22),wxTE_READONLY|wxTE_NOHIDESEL);
-        txtWavestring->SetFont(wxFont(8,wxDEFAULT,wxNORMAL,wxNORMAL,false,"Arial",wxFONTENCODING_SYSTEM));
+        wxPoint(11,40),wxSize(FLUKESCREEN_WIDTH,22),wxTE_READONLY|wxTE_NOHIDESEL);
+        txtWavestring->SetFont(fntSmall);
         txtWavestring->SetForegroundColour(*wxLIGHT_GREY);
         txtWavestring->SetValue("<Matlab vector of downloaded waveform data>");
             
@@ -415,20 +432,48 @@ void MyFrame::VwXinit()
     txtSerialTrace=new wxTextCtrl(pnlConsole,-1,wxT(""),
         wxPoint(1,1),wxSize(FLUKESCREEN_WIDTH+145,FLUKESCREEN_HEIGHT-30),
         wxTE_RICH|wxTE_MULTILINE|wxTE_READONLY);
-        txtSerialTrace->SetFont(wxFont(8,wxDEFAULT,wxNORMAL,wxNORMAL,
-            false,"Arial",wxFONTENCODING_SYSTEM));
+        txtSerialTrace->SetFont(fntSmall);
     st_3=new wxStaticText(pnlConsole,-1,wxT(""),
         wxPoint(1,FLUKESCREEN_HEIGHT-10),wxSize(50,13),
         wxNO_BORDER|wxTRANSPARENT_WINDOW|wxALIGN_LEFT);
         st_3->SetLabel(wxT("Command:"));
     txtCommandToSend=new wxTextCtrl(pnlConsole,ID_TXTCTL_CONSOLECMD,wxT(""),
-        wxPoint(55,FLUKESCREEN_HEIGHT-12),
+        wxPoint(65,FLUKESCREEN_HEIGHT-12),
         wxSize(320,18),wxTE_DONTWRAP|wxTE_PROCESS_ENTER);
     btnSendCommand=new wxButton(pnlConsole,ID_BTN_SEND,wxT(""),
-        wxPoint(380,FLUKESCREEN_HEIGHT-12),wxSize(60,18));
+        wxPoint(390,FLUKESCREEN_HEIGHT-12),wxSize(60,18));
         btnSendCommand->SetLabel(wxT("send"));
         btnSendCommand->SetTitle(wxT("Send"));
 
+    // correct the font sizes for wxGTK
+    #ifndef __WIN32__
+    #ifdef __WXGTK12__ // GTK+ 1.2 or higher   
+        wxFont fntNormal = wxFont(GENERAL_FONT_SIZE, wxDEFAULT, wxNORMAL, wxNORMAL, 
+                    false, GENERAL_FONT, wxFONTENCODING_SYSTEM);
+        #define TOUPDATE_CNT 22
+        wxWindow* toUpdate[TOUPDATE_CNT] = { 
+            // startup view
+            (wxWindow*)st_1, (wxWindow*)st_2, (wxWindow*)stFlukeID,
+            (wxWindow*)comboCOM, (wxWindow*)comboBaud, (wxWindow*)m_menuBar,
+            (wxWindow*)btnReconnect,
+            // panel headings
+            (wxWindow*)nbNote,
+            (wxWindow*)pnlCapture, (wxWindow*)pnlTools, (wxWindow*)pnlConsole,
+            // screen capture panel
+            (wxWindow*)btnGetScreenshot, (wxWindow*)btnCopyScreenshot,
+            (wxWindow*)btnSaveScreenshot, (wxWindow*)btnSavePostscript,
+            // tools panel (waveform, ...)
+            (wxWindow*)st_4, (wxWindow*)comboWaveforms, (wxWindow*)btnGetWaveform,
+            // serial console panel
+            (wxWindow*)st_3, (wxWindow*)txtCommandToSend, (wxWindow*)btnSendCommand,
+            // status bar
+            (wxWindow*)statusBar
+        };
+        for(unsigned int i=0; i<TOUPDATE_CNT; ++i) {
+            toUpdate[i]->SetFont(fntNormal);
+        }
+    #endif
+    #endif
 
     // -- populate the serial ports and baud list
 
@@ -466,7 +511,7 @@ void MyFrame::VwXinit()
     for (int i=8; i<16 && i<MAX_COMPORT_COUNT; ++i) {
         combo_portIDs[i] = i;
         comboCOM->Append(wxString::Format("/dev/ttyUSB%d",(i-8)).c_str(), &combo_portIDs[i]);
-    }    
+    }
     #endif
 
     // next, add ScopeMeter supported baud rates
@@ -709,7 +754,7 @@ void MyFrame::ChangeComPort()
         statusBar->SetStatusText(str,0);
         #else
         ret = mySerial->openPort(0xFF, baud, 8, ONESTOPBIT, 'N', 0, portstr.c_str());
-        str = wxString::Format(portstr+" @ %d baud",baud);
+        str = wxString::Format(portstr+" @ %d",baud);
         statusBar->SetStatusText(str,0);
         #endif
 
@@ -818,7 +863,7 @@ void MyFrame::ChangeComPort()
                 #ifdef __WIN32__
                 statusBar->SetStatusText(wxString::Format("COM%d @ %d baud",port, baud),0);
                 #else
-                statusBar->SetStatusText(wxString::Format(portstr+" @ %d baud",baud));
+                statusBar->SetStatusText(wxString::Format(portstr+" @ %d",baud));
                 #endif
                 break;
             } else {

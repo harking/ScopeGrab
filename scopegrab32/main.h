@@ -126,15 +126,23 @@ extern int fluke_baudrates[];
 #define GFXFORMAT_ADCSAMPLES  3
 #define GFXFORMAT_PNG         4
 
-// GUI combo box widths
+// Linux and Windows GUI differences
+// e.g. combo box widths, fonts
 #ifdef __WIN32__
    #define CB_COM_WIDTH 65
+   #define CB_BAUD_WIDTH 85
    #define MNU_OFFSET 0
+   #define CONSOLE_FONT "Arial"
+   #define GENERAL_FONT "Arial"
+   #define GENERAL_FONT_SIZE 12
 #else
-   #define CB_COM_WIDTH 110
-   #define MNU_OFFSET 20
+   #define CB_COM_WIDTH 130
+   #define CB_BAUD_WIDTH 85
+   #define MNU_OFFSET 0 // 20 for wxX11, 0 for wxGTK
+   #define CONSOLE_FONT "Monospace"
+   #define GENERAL_FONT "Sans Serif"
+   #define GENERAL_FONT_SIZE 9
 #endif 
-#define CB_BAUD_WIDTH 85
 
 // ---- wxWidgets application class ----
 
