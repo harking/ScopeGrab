@@ -23,7 +23,7 @@ limited in the GUI department (e.g. no wxMessageBox...)
 To compile ScopeGrab32, simply do
   make 
 in the source code folder. You can copy ScopeGrab32.bin 
-to where ever you like, e.g. /usr/bin
+and the ./help folder to where ever you like, e.g. /usr/bin
 
 I've tested that ScopeGrab32 works fine in SuSE 9.3 
 kernel 2.6 and GTK2+. I can not make any guarantees for
