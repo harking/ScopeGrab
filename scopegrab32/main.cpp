@@ -384,10 +384,18 @@ void MyFrame::VwXinit()
     imgScreenshot=new wxImage(FLUKESCREEN_WIDTH,FLUKESCREEN_HEIGHT);
     imgScreenshot->SetMask(false);
     imgScreenshot->Replace(0,0,0, 0xFF,0xFF,0xFF);
+    #ifdef __WIN32__
     sbmpScreenshot=new wxStaticBitmap(pnlCapture,ID_SCREENSHOT,
             wxBitmap(imgScreenshot,IMAGE_BITDEPTH),
             wxPoint(5,5),wxSize(FLUKESCREEN_WIDTH,FLUKESCREEN_HEIGHT),
             wxTHICK_FRAME,"sbmpScreenshot");
+    #else
+    sbmpScreenshot=new wxStaticPicture(pnlCapture,ID_SCREENSHOT,
+            wxBitmap(),
+            wxPoint(5,5),wxSize(FLUKESCREEN_WIDTH,FLUKESCREEN_HEIGHT),
+            wxTHICK_FRAME,wxT("sbmpScreenshot"));
+    sbmpScreenshot->SetBitmap(wxBitmap(imgScreenshot,IMAGE_BITDEPTH));
+    #endif
     btnGetScreenshot=new wxButton(pnlCapture,ID_BTN_GETSCREENSHOT,wxT(""),
         wxPoint(35+FLUKESCREEN_WIDTH,10),wxSize(90,25));
         btnGetScreenshot->SetLabel(wxT("Get Screen"));
@@ -1079,6 +1087,9 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
             if ( 0==((++skipcounter) % LINES_PER_UPDATE) ) {
                wxBitmap tempBitmap(this->imgScreenshot, IMAGE_BITDEPTH);
                sbmpScreenshot->SetBitmap(tempBitmap);
+               #ifndef __WIN32__
+               sbmpScreenshot->Refresh(TRUE, NULL);
+               #endif
             }
          
         }
@@ -1256,7 +1267,10 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
             if ( 0==((++skipcounter) % LINES_PER_UPDATE) ) {
                wxBitmap tempBitmap(imgScreenshot, IMAGE_BITDEPTH);
                sbmpScreenshot->SetBitmap(tempBitmap);
-               //sbmpScreenshot->Refresh(false,
+               #ifndef __WIN32__
+               sbmpScreenshot->Refresh(TRUE, NULL);
+               #endif
+                //sbmpScreenshot->Refresh(false,
                //                    new wxRect(0,y_counter-8*EPSONSCREEN_SCALEFACTOR,
                //                    EPSONSCREEN_WIDTH*EPSONSCREEN_SCALEFACTOR,y_counter) );
             }

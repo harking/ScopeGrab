@@ -25,6 +25,7 @@
    // TODO: add linux header includes
    #include "linux_typedefs.h"
    #include <unistd.h>   
+   #include "statpict.h"
 #endif
 
 // ---- wxWidgets includes ----
@@ -254,7 +255,12 @@ private:
    wxButton       *btnGetWaveform;
    wxTextCtrl     *txtWavestring;
 
+   #ifdef __WIN32__
    wxStaticBitmap *sbmpScreenshot;    // image painted to the display
+   #else
+   wxStaticPicture *sbmpScreenshot;
+   #endif
+   
    wxImage        *imgScreenshot;     // actual image content
    bool           bGotScreenshot;     // TRUE when image contains a screenshot
    volatile bool  bEscKey;            // TRUE after user presses 'ESC'
