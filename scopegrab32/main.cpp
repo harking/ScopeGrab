@@ -382,6 +382,7 @@ void MyFrame::VwXinit()
         nbNote->AddPage(pnlCapture,"Screen capture",false);
         pnlCapture->SetTitle(wxT("Screen capture"));
     imgScreenshot=new wxImage(FLUKESCREEN_WIDTH,FLUKESCREEN_HEIGHT);
+    imgScreenshot->SetMask(false);
     imgScreenshot->Replace(0,0,0, 0xFF,0xFF,0xFF);
     sbmpScreenshot=new wxStaticBitmap(pnlCapture,ID_SCREENSHOT,
             wxBitmap(imgScreenshot,IMAGE_BITDEPTH),
@@ -430,8 +431,8 @@ void MyFrame::VwXinit()
         nbNote->AddPage(pnlConsole,"Serial console",false);
         pnlConsole->SetTitle(wxT("Serial console"));
     txtSerialTrace=new wxTextCtrl(pnlConsole,-1,wxT(""),
-        wxPoint(1,1),wxSize(FLUKESCREEN_WIDTH+145,FLUKESCREEN_HEIGHT-30),
-        wxTE_RICH|wxTE_MULTILINE|wxTE_READONLY);
+        wxPoint(1,1),wxSize(FLUKESCREEN_WIDTH+135,FLUKESCREEN_HEIGHT-30),
+        wxTE_RICH|wxTE_MULTILINE);
         txtSerialTrace->SetFont(fntSmall);
     st_3=new wxStaticText(pnlConsole,-1,wxT(""),
         wxPoint(1,FLUKESCREEN_HEIGHT-10),wxSize(50,13),
@@ -626,10 +627,12 @@ void MyFrame::GUI_State(bool on)
 {
     comboBaud->Enable(on); comboCOM->Enable(on);
     m_menuBar->EnableTop(0,on);
-    btnGetScreenshot->Enable(on); btnSaveScreenshot->Enable(on);
-    btnCopyScreenshot->Enable(on);
+    btnGetScreenshot->Enable(on && bFlukeDetected);
+    btnSaveScreenshot->Enable(on && bFlukeDetected);
+    btnCopyScreenshot->Enable(on && bFlukeDetected);
     btnSavePostscript->Enable(on && (SCOPEMETER_190_SERIES==mScopemeterType)); // only 190/190C does postscript
-    btnReconnect->Enable(on); btnSendCommand->Enable(on);
+    btnReconnect->Enable(on);
+    btnSendCommand->Enable(on);
     if(comboWaveforms->GetCount()>0 || !on) { 
         comboWaveforms->Enable(on);
         btnGetWaveform->Enable(on);   
@@ -772,7 +775,7 @@ void MyFrame::ChangeComPort()
         tmrToggleRTS->Start(TIMER_TOGGLERATE, false); // given rate, not single-shot
         DoEvents();
         #ifdef __WIN32__
-        SleepEx(400,FALSE);
+        SleepEx(400,TRUE);
         #else
         // linux task_sleep()
         usleep(400000L);
@@ -931,10 +934,12 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
     unsigned int bitval = 0;
     signed int bitnr = 0;
     BYTE color = 0;
-    wxBitmap* bmpTempBitmap = NULL;
     unsigned int GraphicsFormat = GFXFORMAT_NONE;
     wxString oldSBstr;
     unsigned int idx;
+
+    #define LINES_PER_UPDATE 20    // reduce flicker, only repaint after n new lines
+    unsigned int skipcounter = 0;
 
     wxString command="", response = "", strOldBaud="";
     bool respOk=false;
@@ -1023,8 +1028,8 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
             if ( false==imageStart ) {
                 if ( response.Find("image") >= 0 ) {
                     imageStart = true;
-                    if(imgScreenshot!=NULL) { delete imgScreenshot; }                    
-                    imgScreenshot=new wxImage(FLUKESCREEN_WIDTH,FLUKESCREEN_HEIGHT);
+                    if(this->imgScreenshot!=NULL) { delete imgScreenshot; }
+                    this->imgScreenshot = new wxImage(FLUKESCREEN_WIDTH,FLUKESCREEN_HEIGHT);
                     this->imgScreenshot->Create(FLUKESCREEN_WIDTH,FLUKESCREEN_HEIGHT);
                     this->imgScreenshot->SetMask(false);
                     this->imgScreenshot->Replace(0,0,0, 0xFF,0xFF,0xFF);
@@ -1070,11 +1075,14 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
                 ++y_counter;
             }
 
-            if ( NULL!=bmpTempBitmap ) { delete bmpTempBitmap; }
-            bmpTempBitmap = new wxBitmap(imgScreenshot,IMAGE_BITDEPTH);
-            sbmpScreenshot->SetBitmap(*bmpTempBitmap);
-
+            // refresh the bitmap display after each N new lines
+            if ( 0==((++skipcounter) % LINES_PER_UPDATE) ) {
+               wxBitmap tempBitmap(this->imgScreenshot, IMAGE_BITDEPTH);
+               sbmpScreenshot->SetBitmap(tempBitmap);
+            }
+         
         }
+
         // done receiving postscript image
         if ( true==imageStart ) { bGotScreenshot = true; }
         statusBar->SetStatusText(oldSBstr,0);
@@ -1153,8 +1161,8 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
                     if ( true==lenStr.ToLong(&ltmp,10) ) {
                         rxbytesremaining = ltmp + 1; // fluke sends x+1 bytes...
                         txtSerialTrace->AppendText("Epson ESC byte count string: '"+lenStr+"'\r\n");
-                        if(imgScreenshot!=NULL) { delete imgScreenshot; }
-                        imgScreenshot=new wxImage(EPSONSCREEN_WIDTH,EPSONSCREEN_HEIGHT);
+                        if(this->imgScreenshot!=NULL) { delete imgScreenshot; }
+                        this->imgScreenshot = new wxImage(EPSONSCREEN_WIDTH,EPSONSCREEN_HEIGHT);
                         this->imgScreenshot->Create(EPSONSCREEN_WIDTH,EPSONSCREEN_HEIGHT);
                         this->imgScreenshot->SetMask(false);
                         this->imgScreenshot->Replace(0,0,0, 0xFF,0xFF,0xFF);
@@ -1244,13 +1252,15 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
             }
             imageblock_retries = 0; // reset, until next block
             
-            // update image
-            if ( NULL!=bmpTempBitmap ) { delete bmpTempBitmap; }
-            bmpTempBitmap = new wxBitmap(imgScreenshot,IMAGE_BITDEPTH);
-            sbmpScreenshot->SetBitmap(*bmpTempBitmap);
-            //sbmpScreenshot->Refresh(false, 
-            //                    new wxRect(0,y_counter-8*EPSONSCREEN_SCALEFACTOR,
-            //                    EPSONSCREEN_WIDTH*EPSONSCREEN_SCALEFACTOR,y_counter) );
+            // refresh the bitmap display after each N new lines
+            if ( 0==((++skipcounter) % LINES_PER_UPDATE) ) {
+               wxBitmap tempBitmap(imgScreenshot, IMAGE_BITDEPTH);
+               sbmpScreenshot->SetBitmap(tempBitmap);
+               //sbmpScreenshot->Refresh(false,
+               //                    new wxRect(0,y_counter-8*EPSONSCREEN_SCALEFACTOR,
+               //                    EPSONSCREEN_WIDTH*EPSONSCREEN_SCALEFACTOR,y_counter) );
+            }
+
         }//while(rx)
 
         // done receiving epson esc sequence image
@@ -1260,6 +1270,8 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
     txtSerialTrace->AppendText(wxString::Format("debug: received %ld bytes in total.\r\n", RxTotalBytecount));
 
     // -- show the final result of the operation
+    wxBitmap outBitmap(imgScreenshot, IMAGE_BITDEPTH);
+    sbmpScreenshot->SetBitmap(outBitmap);
     if ( true==gotImage ) {
         statusBar->SetStatusText("screenshot: complete image received",1);
         txtSerialTrace->AppendText("Screenshot complete.\r\n");
@@ -1807,7 +1819,7 @@ wxString MyFrame::GetFlukeResponse(DWORD msTimeout)
         while ( cnt>0 ) {
             // wait
             #ifdef __WIN32__            
-            SleepEx(200,FALSE);
+            SleepEx(200,TRUE);
             #else
             // linux task_sleep()
             usleep(200000L);
@@ -1892,14 +1904,24 @@ wxString MyFrame::QueryFluke(wxString cmdString, bool bAsciiMode,
     DWORD msTimeout, bool* ResponseIsOK)
 {
     wxString response;
+    wxString tmp;
     
-    // clean up the command string
-    cmdString = (cmdString.Trim(true)).Trim(false);
-    cmdString.Replace("\r", " ", true);
-    cmdString.Replace("\t", " ", true);
-    cmdString.Replace("\n", " ", true);
-    while ( cmdString.Replace("  ", " ", true) > 0);
-    cmdString = cmdString.MakeUpper();
+    // clean up the command string, unless it contains also data
+    if ( cmdString.IsAscii() ) {
+       // allow also blank commands (just spaces), do check:
+       tmp = cmdString;
+       tmp = (tmp.Trim(true)).Trim(false);
+       // clean up if not a blank command
+       if ( false==tmp.IsEmpty() ) {
+          cmdString = (cmdString.Trim(true)).Trim(false);
+          cmdString.Replace("\r", " ", true);
+          cmdString.Replace("\t", " ", true);
+          cmdString.Replace("\n", " ", true);
+          while ( cmdString.Replace("  ", " ", true) > 0);
+          cmdString = cmdString.MakeUpper();
+       }
+    }
+    
     // add cmd terminator char (carriage return)
     cmdString.Append("\r");
     
@@ -1917,9 +1939,9 @@ wxString MyFrame::QueryFluke(wxString cmdString, bool bAsciiMode,
 
     // send the command
     txtSerialTrace->AppendText("Query: " + cmdString + "\n");
-    wxCharBuffer dataToSend = cmdString.mb_str();
+    const char* dataToSend = cmdString.c_str();
     if ( false == mySerial->transmitData(
-            (const BYTE*)((const char*)dataToSend), cmdString.Length())
+            (const BYTE*)dataToSend, cmdString.Length())
         )
     {
        txtSerialTrace->AppendText(
