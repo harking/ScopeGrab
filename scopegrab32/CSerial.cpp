@@ -357,7 +357,7 @@ DWORD ReceiverFunc(LPVOID hostClass) {
                   ptrHost->m_portHdl,
                   &(ptrHost->m_overlapRx),
                   &dword1,
-                  TRUE
+                  TRUE // blocking call
                );
 
          if(!ret) {
@@ -366,10 +366,13 @@ DWORD ReceiverFunc(LPVOID hostClass) {
             ResetEvent(ptrHost->m_overlapRx.hEvent);
             continue;
          } else {
-            // wait went ok, get current state, contineu
-            // with reading the bytes farther below
-            GetCommMask ( ptrHost->m_portHdl, &rxevent );
+            // wait went ok, proceed to read the bytes farther below
          }
+         
+      } else if (!ret) {
+         // other WaitCommEvent failure
+         ClearCommError(ptrHost->m_portHdl, &commerr, NULL);
+         continue;
       }
 
       // operation completed, check what event this was
