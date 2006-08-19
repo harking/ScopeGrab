@@ -125,7 +125,7 @@ BEGIN_EVENT_TABLE(MyFrame,wxFrame)
     EVT_MENU(ID_MENU_EXIT,MyFrame::OnMenuExit)
   
     EVT_COMBOBOX(ID_COMBO_COM,MyFrame::evtChangeComPort)
-    EVT_COMBOBOX(ID_COMBO_BAUD,MyFrame::evtChangeComPort)
+    EVT_COMBOBOX(ID_COMBO_BAUD,MyFrame::evtChangeBaudrate)
   
     EVT_BUTTON(ID_BTN_SEND, MyFrame::evtSendCommand)
     EVT_BUTTON(ID_BTN_RECONNECT, MyFrame::evtReconnect)
@@ -516,7 +516,7 @@ void MyFrame::evtTaskTimer(wxTimerEvent& event)
                 comboCOM->SetSelection(0);
                 comboBaud->SetSelection(0);        
             }
-            this->ChangeComPort(); // apply
+            this->ChangeComPort(true); // apply, as "both Port and Baud changed"
             GUI_Up();
             break;
         default:
@@ -617,20 +617,32 @@ void MyFrame::evtKeyDown(wxKeyEvent& event)
 //
 void MyFrame::evtReconnect(wxCommandEvent& event)
 {
-    this->ChangeComPort();
+    this->ChangeComPort(false);
     return;
 }
 
 
 //
-// Combo box selection: user changed the serial baud or port
+// Combo box selection: user changed the serial port
 //
 void MyFrame::evtChangeComPort(wxCommandEvent& event)
 {
     // call ChangeComPort() to apply the settings, but skip
     // duplicate events
     static bool firstCall = true;
-    if ( true==firstCall ) { this->ChangeComPort(); }
+    if ( true==firstCall ) { this->ChangeComPort(true); } // true: new port
+    firstCall = !firstCall;
+}
+
+//
+// Combo box selection: user changed the baud rate
+//
+void MyFrame::evtChangeBaudrate(wxCommandEvent& event)
+{
+    // call ChangeComPort() to apply the settings, but skip
+    // duplicate events
+    static bool firstCall = true;
+    if ( true==firstCall ) { this->ChangeComPort(false); } // false: old port, but new baud
     firstCall = !firstCall;
 }
 
@@ -641,7 +653,7 @@ void MyFrame::evtChangeComPort(wxCommandEvent& event)
 // - if no response at 1200 baud, try the selected baud rate
 //
 
-void MyFrame::ChangeComPort()
+void MyFrame::ChangeComPort(bool bNewPortSelected)
 {
     bool ret;
     bool respOk;
@@ -652,7 +664,7 @@ void MyFrame::ChangeComPort()
     if(NULL==mySerial) {
         baud = 1200;
     } else {
-        if(!mySerial->isOpen()) { baud = 1200; }
+        if(!mySerial->isOpen() || bNewPortSelected) { baud = 1200; }
         else { baud = mySerial->getBaudrate(); }
     }
     prev_baud = baud;

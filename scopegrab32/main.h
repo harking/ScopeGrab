@@ -160,8 +160,9 @@ private:
    void        OnMenuGuide(wxMenuEvent& event);
    // serial port selection
    void        evtChangeComPort(wxCommandEvent& event);
+   void        evtChangeBaudrate(wxCommandEvent& event);
    void        evtReconnect(wxCommandEvent& event);
-   void        ChangeComPort();
+   void        ChangeComPort(bool bNewPortSelected);
    // button clicks
    void        evtSendCommand(wxCommandEvent& event);
    void        evtGetScreenshot(wxCommandEvent& event);
