@@ -1,0 +1,1793 @@
+
+
+
+
+
+
+                   REMOTE CONTROL AND PROGRAMMING REFERENCE
+
+                          for the FLUKE 860 Series
+
+                         Graphical (TM) Multimeters
+
+          =============================================================
+
+
+          This file contains remote control and programming information
+          for the FLUKE 860 Series of Graphical (TM) Multimeters and the
+          PM9080/001 Isolated Optical to RS232 Adapter/Cable.  As such,
+          it applies to the Fluke 863, 865, and 867 Graphical (TM)
+          Multimeters.
+
+
+          It consists of the following chapters:
+
+          1.  INSTALLING THE PM9080/001
+          2.  INTRODUCTION TO PROGRAMMING
+          3.  COMMAND REFERENCE
+
+
+          APPENDIXES
+
+             APPENDIX A         ACKNOWLEDGE DATA
+             APPENDIX B         WAVEFORM DATA
+
+          =============================================================
+
+          1.  INSTALLATION OF THE PM9080/001
+
+
+          - Connect the PM9080/001 to the RS232 port of the computer
+            as indicated in the PM9080/001 Instruction Manual.
+            If necessary, use the 9-pin to 25-pin adapter and the
+            25-pin gender changer included in the PM9080/001 shipment.
+
+          - Hook the PM9080/001 cable to the Fluke 860 Series GMM (TM)
+            as indicated in the PM9080/001 Instruction Manual.
+
+          - Turn on the computer and the Fluke 860 Series GMM.
+
+          - Make sure that the communication settings match for the
+            RS232 port of the computer and the Fluke 860 Series GMM.
+
+            After power-on, the default settings of the Fluke 860 Series
+            GMM are as follows:
+
+                    1200 baud, No parity, 8 data bits, 1 stop bit
+
+            You can modify these settings through the setup function of
+            the instrument, or with the PC (Program Communication)
+            command. See chapter 3 COMMAND REFERENCE.
+
+
+
+                                          1
+
+
+
+
+          =============================================================
+
+          2.  INTRODUCTION TO PROGRAMMING
+
+
+                   ** Basic Programming Information **
+
+
+          When you have installed the PM9080/001 as described in the
+          previous chapter, you can control the Fluke 860 Series GMM
+          from the computer with simple communication facilities, or
+          programming languages such as BASIC.
+
+          All examples given in this manual are in the QBASIC language
+          but will also run in QuickBASIC.
+
+          It is assumed that you have knowledge of these programming
+          languages. QBASIC is supplied with Microsoft Operating System
+          MS-DOS 5.0 and higher, and has an 'on-line' Help function.
+
+          The general syntax and protocol for the Fluke 860 Series
+          GMM are as follows:
+
+          - Simple command format:
+               All commands consist of two characters.
+               Parameters that sometimes follow the command may be
+               separated from it with the separation characters.
+
+          - Consistent output format:
+               Responses always end with the carriage return code
+               (ASCII 13). Because the carriage return code is a
+               non-visible character (not visible on the screen or on
+               paper), this character is represented as <cr> in the
+               command syntax.
+
+          - Synchronization between input and output:
+               After receipt of every command, the Fluke 860 Series GMM
+               returns an acknowledge character (digit) followed by the
+               carriage return code (ASCII 13). This indicates that the
+               command has been successfully received and executed.
+               The computer program must always read this acknowledge
+               response before sending the next command to the
+               Fluke 860 Series GMM.
+
+
+                ** Commands sent to the Fluke 860 Series GMM **
+
+
+          All commands for the Fluke 860 Series GMM consist of a header
+          made up of two alpha characters sometimes followed by
+          parameters.
+          Example:
+
+          RI             This is the Reset Instrument command. It
+                         resets the Fluke 860 Series GMM.
+
+
+
+
+                                          2
+
+
+
+
+
+
+          Some of the commands are followed by one or more parameters
+          to give the Fluke 860 Series GMM more information.
+          Example:
+
+          QP 2           This is the Query Print command. It will
+                         download a snapshot of the display currently
+                         shown on the instrument in various printer
+                         formats.  Here, the parameter 2 requests HP
+                         PCL format.
+
+          Some commands require several parameters.
+          Example:
+
+          PC 2400 N 8 1  This is the Program Communication command.
+                         This command requires four parameters. The
+                         parameters can be separated by spaces or commas.
+
+          The separators between parameters may be spaces or commas.
+
+          A code at the end of each command tells the Fluke 860 Series
+          GMM that the command is ended. This is the carriage return
+          code (ASCII 13) and is called the Program Message Terminator.
+          This code is needed to indicate to the Fluke 860 Series GMM
+          that the command is completed so it can start executing the
+          command. Also refer to the section 'Command and Response
+          Terminators'.
+
+
+
+            ** Responses received from the Fluke 860 Series GMM **
+
+
+          After each command sent to the Fluke 860 Series GMM, there
+          is an automatic response from it, indicated as <acknowledge>
+          (which you MUST receive), to let the computer know whether or
+          not the received command has been successfully executed.
+          Refer to the 'Acknowledge' section below.
+
+          There are several commands that ask the Fluke 860 Series
+          GMM for response data. Such commands are called Queries.
+          Example:
+
+          ID        This is the IDentification query, which asks for
+                    the model number and the software version of the
+                    Fluke 860 Series GMM.
+
+          When the Fluke 860 Series GMM has received a query, it sends
+          the <acknowledge> reply as it does after any command, but
+          now it is followed by the queried response data.
+
+          It should be noted here that the acknowledge and response
+          data do not come as one string.  There is a gap between the
+          acknowledge and the response string.
+
+          The format of the response data depends upon which query is
+          sent. When a response consists of different response data
+
+                                          3
+
+
+
+
+          portions, these are often separated with commas (ASCII code 44).
+          Also refer to the section 'Data Separators'.
+
+          All response data, <acknowledge> as well as following
+          (queried) response data are terminated with the carriage
+          return code (<cr> = ASCII 13). Also refer to the section
+          'Command and Response Terminators'.
+
+
+                              ** Acknowledge **
+
+
+          After receiving of a command, the Fluke 860 Series GMM
+          automatically returns the <acknowledge> response to let the
+          computer know whether or not the received command has been
+          successfully executed.
+          This response is a one-digit number followed by <cr> as
+          response terminator. If <acknowledge> is 0, it indicates
+          that the Fluke 860 Series GMM has successfully executed the
+          command. If the command was a query, the <acknowledge><cr>
+          response is immediately followed by the queried response data
+          terminated with <cr>.
+          If <acknowledge> is 1 or higher, it indicates that the
+          Fluke 860 Series GMM has not executed the command
+          successfully. In that case, if the command was a query, the
+          <acknowledge><cr> response is NOT followed by any further
+          Response data.
+
+          Note:    YOU MUST ALWAYS RECEIVE <acknowledge>, EVEN WHEN
+                   THE COMMAND WAS NOT A QUERY.
+
+
+                            ** Data Separators **
+
+
+          DATA Separators are used between parameters sent to the
+          Fluke 860 Series GMM and between values and strings received
+          from the Fluke 860 Series GMM. The following list shows the
+          DATA separators that can be used:
+
+          - Program Data Separator
+
+            Name     Character   ASCII Value    Comments
+                      Decimal
+           ----------------------------------------------------------
+            comma        ,           44      Single comma allowed
+            space       SP           32      Multiple spaces allowed
+
+
+          - Response Data Separator
+
+            Name     Character   ASCII Value    Comments
+                      Decimal
+           ----------------------------------------------------------
+            comma        ,           44
+
+
+
+
+                                          4
+
+
+
+
+                    ** Command and Response Terminators **
+                            (Message Terminators)
+
+
+          - Command (Program Message) Terminators
+
+            A code is needed at the end of each command to tell the
+            Fluke 860 Series GMM that the command is ended, and that it
+            can start executing the command. This code is called the
+            Program Message Terminator. The code needed for the
+            GMM is carriage return (ASCII code 13 decimal).
+            Notes:
+
+             1. The carriage return code is a non-visible ASCII
+                character. Therefore this code is represented as <cr>
+                in the Command Syntax and Response Syntax lines given
+                for each command.
+             2. The QBASIC programming language, which is used for
+                all program examples, automatically adds a carriage
+                return to the end of the command output. (In the QBASIC
+                language, this is the PRINT #....  statement.)
+
+            After <cr> is recognized by the Fluke 860 Series GMM, the
+            entered command is executed. After EACH command the
+            Fluke 860 Series GMM returns <acknowledge><cr> to the
+            computer to signal the end of the command processing. (Also
+            refer to the section 'Acknowledge'.)
+
+          - Response (Message) Terminators
+
+            The response from the Fluke 860 Series GMM ends with a
+            carriage return (ASCII 13). This is indicated as <cr> in
+            the Response Syntax for each command.
+
+
+
+                       ** Typical program sequence **
+                                 An example
+
+          A typical program sequence consists of the following user
+          actions:
+
+          1. Set the communication parameters for the RS232 port of
+             the computer to match the Fluke 860 Series GMM
+             settings.
+
+          2. Output a command or query to the GMM.
+
+          3. Input the acknowledge response from the GMM.
+
+             If the response value is zero, go to step 4.
+
+             If the response value is non-zero, the GMM did not
+             execute the previous command.
+
+
+
+
+
+                                          5
+
+
+
+
+          4. If a query was output to the GMM, input its
+             response.
+
+          5. The sequence of points 2, 3, and 4 may be repeated for
+             different commands OR queries.
+
+          6. Close the communication channel.
+
+
+          Refer to the program example on the next page.
+
+
+
+          'Example of a typical program sequence:
+
+          '*****************  Begin example program  ****************
+
+          OPEN "COM1:1200,N,8,1,CS,DS,RB8192" FOR RANDOM AS #1
+
+           'This QBASIC program line sets the parameters for the
+           'RS232 port (COM1 on the Computer) to match the
+           'GMM power-on default settings. It also opens a
+           'communication channel (assigned #1) for input or output
+           'through the COM1 port. Your GMM must be connected
+           'to this port. "RB8192" sets the size of the computer
+           'receive buffer to 8192 bytes to prevent buffer overflow
+           'during communication with the Fluke 860 Series GMM.
+
+          PRINT #1, "ID"
+
+           'Outputs the Identification command (query) to the GMM.
+
+          GOSUB Acknowledge
+
+           'This subroutine inputs the acknowledge response from
+           'the GMM and displays an error message if the
+           'acknowledge value is non-zero.
+
+          INPUT #1, Response$
+
+           'This inputs the response data from the ID query.
+
+          PRINT Response$
+
+           'Displays the queried data.
+
+          CLOSE #1
+
+           'This closes the communication channel.
+
+          END
+
+           'This ends the program.
+
+          '
+
+
+
+
+                                          6
+
+
+
+
+          '****************  Acknowledge subroutine  ******************
+          'Use this subroutine after each command or query sent to the
+          'Fluke 860 Series GMM. This routine inputs the acknowledge
+          'response from the GMM. If the response is non-zero,
+          'the previous command was not correct or was not correctly
+          'received by the GMM. Then an error message is
+          'displayed and the program is aborted.
+
+          Acknowledge:
+          INPUT #1, ACK           'Reads acknowledge from GMM.
+          IF ACK <> 0 THEN
+             PRINT "Error Acknowledge = "; ACK;
+             PRINT "Program aborted."
+             END
+          END IF
+          RETURN
+
+          '******************  End example program  *****************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                          7
+
+
+
+
+          =============================================================
+
+          3.  COMMAND REFERENCE
+
+
+          CONVENTIONS
+
+
+                    ** Page layout used for each command **
+
+          - Header
+
+            Each command description starts on a new page with a header
+            for quickly finding the command. This header indicates the
+            command name and the two-character header used for the
+            command syntax.
+
+
+                           ** Syntax conventions **
+
+          The Command Syntax and the Response Syntax may contain the
+          following characters:
+
+          UPPERCASE      These characters are part of the syntax.
+                         For commands, upper case is required.
+
+          <...>          An expression between these brackets is a
+                         code, such as <cr> (carriage return) that can
+                         not be expressed in a printable character, or
+                         it is a parameter that is further specified.
+                         Do not insert the brackets in the command!
+
+          [...]          The item between these brackets is optional.
+                         This means that you may omit it.
+                         Do not insert the brackets in the command!
+
+            |            This is a separator between selectable items.
+                         This means that you must choose only one of
+                         the items (exclusive or).
+
+          =============================================================
+
+          ** Overview of commands for the Fluke 860 Series GMM **
+
+               COMMAND NAME               COMMAND      PAGE
+               -------------------------------------------------------
+               DEFAULT SETUP                DS           9
+               IDENTIFICATION               ID          10
+               PROGRAM COMMUNICATION        PC          11
+               PROGRAM CONFIGURATION        PM          13
+               PROGRAM WAVEFORM             PW          15
+               QUERY DATA                   QD          17
+               QUERY MEASUREMENT            QM          18
+               QUERY PRINT                  QP          20
+               QUERY WAVEFORM               QW          22
+               RESET INSTRUMENT             RI          23
+               SET FUNCTION                 SF          25
+
+
+                                          8
+
+
+
+
+          =============================================================
+                         DEFAULT SETUP                 DS
+          -------------------------------------------------------------
+
+          Purpose:
+
+             Returns the Fluke 860 Series instrument to it's default
+             power-up state.  Equivalent to turning the instrument
+             off and back on.
+
+          Command Syntax:
+
+             DS<cr>
+
+
+          Response Syntax:
+
+             <acknowledge><cr>
+
+             Note:    Wait for at least 4 seconds after the
+                      <acknowledge> reply has been received, to let
+                      the GMM settle itself before you send the
+                      next command.
+
+
+          Example:
+
+          '*****************  Begin example program  *****************
+
+          OPEN "COM1:1200,N,8,1,CS,DS,RB8192" FOR RANDOM AS #1
+          CLS
+          PRINT #1, "DS"          'Sends DEFAULT SETUP command.
+          GOSUB Acknowledge       'Input acknowledge from GMM.
+          SLEEP 4                 'Delay (4 s) necessary after "DS".
+          PRINT #1, "ID"          'Sends the IDENTIFICATION query.
+          GOSUB Acknowledge       'Input acknowledge from GMM.
+          INPUT #1, ID$           'Inputs identity data from GMM.
+          PRINT ID$               'Displays identity data.
+          CLOSE #1
+          END
+
+          '****************  Acknowledge subroutine  ******************
+          'Use this subroutine after each command or query sent to the
+          'Fluke 860 Series GMM. This routine inputs the acknowledge
+          'response from the GMM. If the response is non-zero,
+          'the previous command was not correct or was not correctly
+          'received by the GMM. Then an error message is
+          'displayed and the program is aborted.
+
+          Acknowledge:
+          INPUT #1, ACK           'Reads acknowledge from GMM.
+          IF ACK <> 0 THEN
+             PRINT "Error Acknowledge = "; ACK;
+             PRINT "Program aborted."
+             END
+          END IF
+          RETURN
+          '******************  End example program  *****************
+
+                                          9
+
+
+
+
+          =============================================================
+                     IDENTIFICATION                        ID
+          -------------------------------------------------------------
+
+          Purpose:
+
+             Returns information about the model number of the
+             Fluke 860 Series GMM and its firmware version.
+
+          Command Syntax:
+
+             ID<cr>
+
+          Response Syntax:
+
+             <acknowledge><cr><identity><cr>
+
+             where,
+             <identity> is an ASCII string of the format:
+                <model number>,<version>,<serial number>
+
+
+          Example:
+
+          The following example program queries the model number of
+          the Fluke 860 Series GMM and displays this data on the PC
+          screen.
+
+
+          '*****************  Begin example program  *****************
+
+          CLS                     'Clears the PC screen.
+          OPEN "COM1:1200,N,8,1,CS,DS,RB8192" FOR RANDOM AS #1
+          PRINT #1, "ID"          'Sends IDENTIFICATION query.
+          GOSUB Acknowledge       'Input acknowledge from GMM.
+          INPUT #1, IDENT$        'Inputs the queried data.
+          PRINT IDENT$            'Displays queried data.
+          CLOSE #1
+          END
+
+
+          '****************  Acknowledge subroutine  ******************
+          'Use this subroutine after each command or query sent to the
+          'Fluke 860 Series GMM. This routine inputs the acknowledge
+          'response from the GMM. If the response is non-zero,
+          'the previous command was not correct or was not correctly
+          'received by the GMM. Then an error message is
+          'displayed and the program is aborted.
+
+          Acknowledge:
+          INPUT #1, ACK           'Reads acknowledge from GMM.
+          IF ACK <> 0 THEN
+             PRINT "Error Acknowledge = "; ACK;
+             PRINT "Program aborted."
+             END
+          END IF
+          RETURN
+          '******************  End example program  *****************
+
+                                         10
+
+
+
+
+          =============================================================
+                         PROGRAM COMMUNICATION         PC
+          -------------------------------------------------------------
+
+          Purpose:
+
+             Programs the following settings used for RS232
+             communication:
+
+             1. Baud rate
+             2. Parity
+
+
+          Command Syntax:
+
+             PC <baudrate>,<parity>,[databits],[stopbits]<cr>
+
+             where,
+             <baudrate>  =       1200|2400|4800|9600|19200
+             <parity>    =       O|E|N    (Odd, Even, or No parity)
+             [databits]  =       8        (8 is the only option)
+             [stopbits]  =       1        (1 is the only option)
+
+
+             Notes:
+
+               Default settings after power-on:
+               baudrate  =    1200
+               Parity    =    N
+               DATA bits =    8
+               stop bits =    1
+               handshake =    XON/XOFF  (see the following notes)
+
+               The Fluke867 supports XON/XOFF to take care of
+               handshaking with a printer or computer.  The Fluke867
+               will never send an XOFF because it has a sufficiently
+               large receive buffer to handle all commands.  If the
+               GMM receives an XOFF (ASCII code 19 decimal)
+               it will postpone data transmission until it receives
+               an XON (ASCII code 17 decimal).
+
+
+               The PW and PM commands use binary data that may
+               contain XON and XOFF codes.  These are disregarded
+               by the Fluke 860 Series.
+
+
+          Response Syntax:
+
+             <acknowledge><cr>
+
+
+          Example:
+
+          The following program assumes that the Fluke 860 Series GMM
+          is connected to the COM1 port of the PC and that the power-on
+          defaults are valid. The program switches over to baud rate
+
+
+                                         11
+
+
+
+
+          19200. This includes first programming the GMM and
+          then the RS232 port of the PC to baud rate 19200. This higher
+          baud rate considerably increases the data transfer speed.
+          After the data transfer from the ID query, the baud rate is
+          set back to 1200, the power-on default value.
+
+
+          '*****************  Begin example program  *****************
+
+          CLS
+          OPEN "COM1:1200,N,8,1,CS,DS,RB8192" FOR RANDOM AS #1
+                               'Programs COM1 port parameters to match with
+                               'the Fluke 860 Series power-on defaults.
+
+          PRINT #1, "PC 19200,N,8,1"
+                               'Programs Fluke 860 Series to a higher
+                               'baud rate (other parameter not changed).
+
+          GOSUB Acknowledge    'Input acknowledge from GMM.
+
+          CLOSE #1
+          OPEN "COM1:19200,N,8,1,CS,DS,RB8192" FOR RANDOM AS #1
+                               'Programs COM1 port parameters to match
+                               'with the new Fluke 860 Series settings.
+
+          PRINT #1, "ID"       'Sends Identification query.
+          GOSUB Acknowledge    'Input acknowledge from GMM.
+          INPUT #1, N, CMD$    'Inputs queried data.
+          PRINT CMD$
+
+          PRINT #1, "PC 1200,N,8,1"
+                               'Programs Fluke 860 Series back to the
+                               'original communication settings.
+
+          GOSUB Acknowledge    'Input acknowledge from GMM.
+          CLOSE #1
+          END
+
+          '****************  Acknowledge subroutine  ******************
+          'Use this subroutine after each command or query sent to the
+          'Fluke 860 Series GMM. This routine inputs the acknowledge
+          'response from the GMM. If the response is non-zero,
+          'the previous command was not correct or was not correctly
+          'received by the GMM. Then an error message is
+          'displayed and the program is aborted.
+
+          Acknowledge:
+          INPUT #1, ACK           'Reads acknowledge from GMM.
+          IF ACK <> 0 THEN
+             PRINT "Error Acknowledge = "; ACK;
+             PRINT "Program aborted."
+             END
+          END IF
+          RETURN
+          '******************  End example program  *****************
+
+
+
+
+                                         12
+
+
+
+
+          =============================================================
+                         PROGRAM CONFIGURATION                 PM
+          -------------------------------------------------------------
+
+          Purpose:
+
+             Programs a configuration memory location with data saved
+             from a previous QD (Query Data) command.
+
+          Command Syntax:
+
+             Consists of two parts. The first part indicates the
+             destination, the second part sends the configuration
+             data. The Fluke 860 Series GMM gives an <acknowledge>
+             reply after the first and after the second part.
+             Both <acknowledge> replies must be 0 to successfully
+             complete configuration programming.
+
+          Syntax part 1:
+
+             PM <memory location><cr>
+
+             where,
+                 <memory location> =  1|2|3|4|5|6|7
+
+          Part 1 Response Syntax:
+             <acknowledge><cr>
+
+
+          Syntax part 2:
+             <configuration><checksum>
+
+             where,
+              <configuration>  =  buffer of 174 hexadecimal characters,
+                                  representing a configuration memory
+                                  location for the Fluke 860 Series GMM.
+              <checksum>       =  2 byte additive checksum.
+
+
+          Part 2 Response Syntax:
+             <acknowledge><cr>
+
+
+          Remarks:
+
+             The Fluke 860 Series GMM sends the <acknowledge> reply
+             after it has executed the setup from the PM command.
+             You must send the <configuration> string as a whole,
+             EXACTLY as returned from the QD (Query Data) command.
+             If you do not follow this rule, the Fluke 860 Series GMM
+             may be put into an unknown state.
+
+          Example:
+
+          The following example program demonstrates the use of the
+          QD (QUERY DATA) and the PM (PROGRAM CONFIGURATION) commands.
+
+
+
+                                         13
+
+
+
+
+          The present configuration is queried from the GMM and saved to a
+          buffer. Then it sends the configuration to the memory location 1
+          of the GMM.
+
+          '*****************  Begin example program  *****************
+
+          OPEN "COM1:1200,N,8,1,CS,DS,RB8192" FOR RANDOM AS #1
+          CLS
+          PRINT #1, "QD 0"          'Get the current configuration.
+          GOSUB Acknowledge       'Input acknowledge from GMM.
+          CONFIG$ = INPUT$(176, #1) 'Save configuration data in a buffer.
+          SLEEP 2                 'Delay (2 s) necessary after "DS".
+          PRINT #1, "PM 1"        'Send the configuration to memory 1.
+          GOSUB Acknowledge       'Input acknowledge from GMM.
+          PRINT #1, CONFIG$       'Send the configuration data to port.
+          GOSUB Acknowledge       'Input acknowledge from GMM.
+          PRINT "Configuration Data is saved in memory 1."
+          CLOSE #1
+          END
+
+
+          '****************  Acknowledge subroutine  ******************
+          'Use this subroutine after each command or query sent to the
+          'Fluke 860 Series GMM. This routine inputs the acknowledge
+          'response from the GMM. If the response is non-zero,
+          'the previous command was not correct or was not correctly
+          'received by the GMM. Then an error message is
+          'displayed and the program is aborted.
+
+          Acknowledge:
+          INPUT #1, ACK           'Reads acknowledge from GMM.
+          IF ACK <> 0 THEN
+             PRINT "Error Acknowledge = "; ACK;
+             PRINT "Program aborted."
+             END
+          END IF
+          RETURN
+
+          '******************  End example program  *****************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                         14
+
+
+
+
+          =============================================================
+                         PROGRAM WAVEFORM              PW
+          -------------------------------------------------------------
+
+          Purpose:
+
+
+
+             Programs a waveform memory location with data saved
+             from a previous QW (Query Waveform) command.
+
+
+          Command Syntax:
+
+             Consists of two parts. The first part indicates the
+             destination, the second part sends the waveform
+             DATA for a waveform. The Fluke 860 Series GMM
+             gives an <acknowledge> reply after the first and
+             after the second part. Both <acknowledge> replies must
+             be 0 to successfully complete waveform programming.
+
+          Syntax part 1:
+
+             PW <memory location><cr>
+
+             where,
+                 <memory location> =  1|2|3
+
+          Response from part 1:
+
+             <acknowledge><cr>
+
+             If the value 0 is returned for <acknowledge>, you can
+             send the syntax part 2 as follows.
+
+
+          Syntax part 2:
+
+             You now must give the waveform data as follows:
+             <configuration><waveform><checksum>
+
+             where,
+               <configuration>   =  buffer of 174 hexadecimal characters,
+                                    representing a configuration memory
+                                    location for the Fluke 860 Series GMM.
+               <waveform>        =  buffer of 810 hexadecimal characters,
+                                    representing a waveform memory location
+                                    for the Fluke 860 Series GMM.
+               <checksum>        =  2 byte additive checksum.
+
+
+          Response Syntax from part 2:
+
+             <acknowledge><cr>
+
+
+
+
+
+                                         15
+
+
+
+
+          The following example program demonstrates the use of the
+          QW (QUERY WAVEFORM) and the PW (PROGRAM WAVEFORM) commands.
+          The present waveform is queried from the GMM and saved to a
+          buffer. Then it sends the waveform to the memory location 3
+          of the GMM.
+
+          '*****************  Begin example program  *****************
+
+          OPEN "COM1:1200,N,8,1,CS,DS,RB8192" FOR RANDOM AS #1
+          CLS
+          PRINT #1, "QW 0"          'Get the current configuration.
+          GOSUB Acknowledge       'Input acknowledge from GMM.
+          WAVE$ = INPUT$(986, #1) 'Save waveform data in a buffer.
+          SLEEP 2                 'Delay 2 sec.
+          PRINT #1, "PW 3"        'Send the waveform to memory 3.
+          GOSUB Acknowledge       'Input acknowledge from GMM.
+          PRINT #1, WAVE$         'Send the waveform data to port.
+          GOSUB Acknowledge       'Input acknowledge from GMM.
+          PRINT "Waveform Data is saved in memory 3."
+          CLOSE #1
+          END
+
+
+          '****************  Acknowledge subroutine  ******************
+          'Use this subroutine after each command or query sent to the
+          'Fluke 860 Series GMM. This routine inputs the acknowledge
+          'response from the GMM. If the response is non-zero,
+          'the previous command was not correct or was not correctly
+          'received by the GMM. Then an error message is
+          'displayed and the program is aborted.
+
+          Acknowledge:
+          INPUT #1, ACK           'Reads acknowledge from GMM.
+          IF ACK <> 0 THEN
+             PRINT "Error Acknowledge = "; ACK;
+             PRINT "Program aborted."
+             END
+          END IF
+          RETURN
+
+          '******************  End example program  *****************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                         16
+
+
+
+
+           ============================================================
+                         QUERY DATA                   QD
+           ------------------------------------------------------------
+
+           Purpose:
+
+             Queries data contained in a configuration memory location.
+
+          Command Syntax:
+
+             QD <memory location><cr>
+
+             where,
+                 <memory location> =  0|1|2|3|4|5|6|7
+                 (0 for current configuration)
+
+          Response Syntax:
+
+             <acknowledge><cr><configuration><checksum>
+
+             where,
+             <configuration> = string of 174 hexadecimal characters,
+                               representing the requested configuration
+                               of the Fluke 860 Series GMM.
+             <checksum> =      2 byte additive checksum.
+
+
+          Example:
+
+              See example for PM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                         17
+
+
+
+
+          =============================================================
+                         QUERY MEASUREMENT             QM
+          -------------------------------------------------------------
+
+          Purpose:
+
+             Queries a measurement result in ASCII from the
+             Fluke 860 Series.
+
+
+          Command Syntax:
+
+             QM<cr>
+
+
+          Response Syntax:
+
+             <acknowledge><cr>
+
+             If <acknowledge> value 0 is returned, this response is
+             immediately continued with the following data:
+
+             <count><measurment><cr>[measurement][cr]...
+
+             where,
+             <count>       =  one hexadecimal byte indicating how many
+                              measurements will follow.
+             <measurement> =  <reading> <units> [timestamp]  (An ASCII
+                              string containing the measurement,
+                              unit of measure, and possibly timestamp.)
+             <reading>     =  number with decimal
+             <units>       =  type of measurement
+             [timestamp]   =  relative time of reading, available only in
+                              certain modes
+
+
+          Example:
+              The following example get the measurement data and print
+              the result on the screen.
+
+          '*****************  Begin example program  *****************
+
+          CLS                     'Clears the PC screen.
+          OPEN "COM1:1200,N,8,1,CS,DS,RB8192" FOR RANDOM AS #1
+          PRINT
+          PRINT #1, "QM"         'Get measurement data.
+          GOSUB Acknowledge       'Input acknowledge from GMM.
+          COUNTS$ = INPUT$(1, #1) 'Get how many line of data to get.
+          COUNT = ASC(COUNTS$)
+          FOR I = 1 TO COUNT      'Print out each line of data.
+          LINE INPUT #1, QM$
+          PRINT QM$
+          NEXT I
+          CLOSE #1
+          END
+
+
+
+
+                                         18
+
+
+
+
+          '****************  Acknowledge subroutine  ******************
+          'Use this subroutine after each command or query sent to the
+          'Fluke 860 Series GMM. This routine inputs the acknowledge
+          'response from the GMM. If the response is non-zero,
+          'the previous command was not correct or was not correctly
+          'received by the GMM. Then an error message is
+          'displayed and the program is aborted.
+
+          Acknowledge:
+          INPUT #1, ACK           'Reads acknowledge from GMM.
+          IF ACK <> 0 THEN
+             PRINT "Error Acknowledge = "; ACK;
+             PRINT "Program aborted."
+             END
+          END IF
+          RETURN
+
+          '******************  End example program  *****************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                         19
+
+
+
+
+          =============================================================
+                         QUERY PRINT                   QP
+          -------------------------------------------------------------
+
+          Purpose:
+
+             Queries the print data from the Fluke 860 Series GMM in
+             EPSON FX/LQ format or HP PCL format, binary coded.
+             This allows you to make a copy of the GMM screen
+             on paper in a computer file.
+
+
+          Command Syntax:
+
+             QP [format type]<cr>
+
+             where,
+                 [format type] =  0|1|2
+                     None  Epson format
+                     0     Epson format
+                     1     Epson format
+                     2     HP PCL format
+
+          Response Syntax:
+
+             <acknowledge><cr>
+
+             If <acknowledge> value 0 is returned, this response is
+             immediately continued with the following data:
+
+             <print data>
+
+             where,
+             <print data> =  Binary data and printer control bytes.
+                             The decimal value of each byte is in
+                             the range from 0 to 255.
+
+
+          Example:
+
+          The following program reads the GMM screen (print)
+          DATA and copies this data to the printer port LPT1.
+          The print format is only suitable for an EPSON FX/LQ
+          compatible printer.
+          The data transfer speed (baud rate) is set to 19200 and after
+          the output it is set back to 1200 (default baud rate).
+
+
+          '*****************  Begin example program  *****************
+
+          CLS
+          OPEN "COM1:1200,N,8,1" FOR RANDOM AS #1
+                        'Programs COM1 port parameters to
+                        'match with the Fluke 860 Series power-on
+                        'defaults.
+          PRINT #1, "PC 19200,N,8,1" 'Programs Fluke 860 Series to
+                                     'a higher baud rate.
+
+
+                                         20
+
+
+
+
+          GOSUB Acknowledge          'Input acknowledge from GMM.
+          SLEEP 2
+          CLOSE #1
+          OPEN "COM1:19200,N,8,1,CS,DS,RB7500" FOR RANDOM AS #1
+                        'Programs COM1 port parameters to
+                        'match with the new Fluke 860 Series
+                        'settings.
+          PRINT #1, "QP"             'Sends QUERY PRINT data command.
+          GOSUB Acknowledge          'Input acknowledge from GMM.
+          PICTURE$ = INPUT$(6161, #1)
+          SLEEP 10                   'Wait 10s for the picture
+          PRINT #1, "PC 1200,N,8,1"  'Programs Fluke 860 Series back to
+                                     'the default communication settings.
+          GOSUB Acknowledge          'Input acknowledge from GMM.
+
+
+          OPEN "LPT1" FOR OUTPUT AS #2
+          PRINT #2, PICTURE$        'Print the waveform data.
+          CLOSE                     'Close all files.
+          END
+          '
+
+          '****************  Acknowledge subroutine  ******************
+          'Use this subroutine after each command or query sent to the
+          'Fluke 860 Series GMM. This routine inputs the acknowledge
+          'response from the GMM. If the response is non-zero,
+          'the previous command was not correct or was not correctly
+          'received by the GMM. Then an error message is
+          'displayed and the program is aborted.
+
+          Acknowledge:
+          INPUT #1, ACK           'Reads acknowledge from GMM.
+          IF ACK <> 0 THEN
+             PRINT "Error Acknowledge = "; ACK;
+             PRINT "Program aborted."
+             END
+          END IF
+          RETURN
+
+          '******************  End example program  ******************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                         21
+
+
+
+
+          =============================================================
+                         QUERY WAVEFORM                QW
+          -------------------------------------------------------------
+
+          Purpose:
+
+             Queries the current or stored waveform data from
+             the Fluke 860 Series GMM.
+
+
+          Command Syntax:
+
+             QW <waveform location><cr>
+
+             where,
+             <waveform location> = 0 through 3:
+
+                   0    Present Waveform
+                   1    Waveform memory 1
+                   2    Waveform memory 2
+                   3    Waveform memory 3
+
+
+          Response Syntax:
+
+             <acknowledge><cr>
+
+             If <acknowledge> value 0 is returned, this response is
+             immediately continued with the following data:
+
+             <waveform><checksum>
+
+                 <checksum> = 2 byte additive checksum.
+
+             For detailed descriptions about the waveform structure,
+             refer to Appendix B.
+
+
+
+
+          Example:
+
+              See example for PW
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                         22
+
+
+
+
+          =============================================================
+                         RESET INSTRUMENT              RI
+          -------------------------------------------------------------
+
+          Purpose:
+
+             Resets all instrument registers to factory settings,
+             except communications parameters, printer type, and
+             calibration constants.  If the instrument has any waveform
+             or setup memories, these are cleared as well.
+
+          Command Syntax:
+
+             RI<cr>
+
+
+          Response Syntax:
+
+             <acknowledge><cr>
+
+             Note:    Wait for at least 5 seconds after the
+                      <acknowledge> reply has been received, to let
+                      the GMM settle itself before you send the
+                      next command.
+
+
+          Example:
+
+          The following example resets the GMM and waits for 5
+          seconds to let the GMM execute the reset and become
+          ready for next commands.
+          The GMM is queried for the identification data; this
+          DATA is input and displayed on the PC screen.
+
+
+
+          '*****************  Begin example program  *****************
+
+          CLS                     'Clears the PC screen.
+          OPEN "COM1:1200,N,8,1,CS,DS,RB8192" FOR RANDOM AS #1
+          PRINT #1, "RI"          'Sends the RESET INSTRUMENT command.
+          GOSUB Acknowledge       'Input acknowledge from GMM.
+          SLEEP 5                 'Delay (5 s) necessary after reset.
+          PRINT #1, "ID"          'Sends IDENTIFICATION query.
+          GOSUB Acknowledge       'Input acknowledge from GMM.
+          INPUT #1, IDENT$        'Inputs the queried data.
+          PRINT IDENT$            'Displays queried data.
+          CLOSE #1
+          END
+
+
+          '****************  Acknowledge subroutine  ******************
+          'Use this subroutine after each command or query sent to the
+          'Fluke 860 Series GMM. This routine inputs the acknowledge
+          'response from the GMM. If the response is non-zero,
+          'the previous command was not correct or was not correctly
+          'received by the GMM. Then an error message is
+          'displayed and the program is aborted.
+
+                                         23
+
+
+
+
+          Acknowledge:
+          INPUT #1, ACK           'Reads acknowledge from GMM.
+          IF ACK <> 0 THEN
+             PRINT "Error Acknowledge = "; ACK;
+             PRINT "Program aborted."
+             END
+          END IF
+          RETURN
+
+          '******************  End example program  *****************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                         24
+
+
+
+
+          =============================================================
+                         SET FUNCTION                  SF
+          -------------------------------------------------------------
+
+          Purpose:
+
+             This command is used to simulate a key press on the
+             Fluke 860 Series.
+
+          Command Syntax:
+
+             SF <key ID><cr>
+
+             where,
+             <key ID> =
+                        0    Range
+                        1    Touch Hold
+                        2    Save/Print
+                        3    Display
+                        4    Min/Max
+                        5    Hz
+                        6    Wake -up / Backlight
+                        8    Softkey 1
+                        9    Softkey 2
+                        A    Softkey 3
+                        B    Softkey 4
+                        C    Softkey 5
+
+          Response Syntax:
+
+             <acknowledge><cr>
+
+
+          Example:
+
+
+
+          '*****************  Begin example program  *****************
+
+          CLS                     'Clears the PC screen.
+          OPEN "COM1:1200,N,8,1,CS,DS,RB8192" FOR RANDOM AS #1
+          PRINT
+          PRINT #1, "SF 1"         'Sends command to enter touch hold.
+          GOSUB Acknowledge       'Input acknowledge from GMM.
+          PRINT
+          PRINT "Press any key on the PC keyboard to exit touch hold."
+          SLEEP
+          PRINT #1, "SF 1"         'Sends command to exit touch hold.
+          GOSUB Acknowledge       'Input acknowledge from GMM.
+          PRINT
+          CLOSE #1
+          END
+
+
+          '****************  Acknowledge subroutine  ******************
+          'Use this subroutine after each command or query sent to the
+          'Fluke 860 Series GMM. This routine inputs the acknowledge
+
+
+                                         25
+
+
+
+
+          'response from the GMM. If the response is non-zero,
+          'the previous command was not correct or was not correctly
+          'received by the GMM. Then an error message is
+          'displayed and the program is aborted.
+
+          Acknowledge:
+          INPUT #1, ACK           'Reads acknowledge from GMM.
+          IF ACK <> 0 THEN
+             PRINT "Error Acknowledge = "; ACK;
+             PRINT "Program aborted."
+             END
+          END IF
+          RETURN
+
+          '******************  End example program  *****************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                         26
+
+
+
+
+          =============================================================
+                         APPENDIX A          ACKNOWLEDGE DATA
+          -------------------------------------------------------------
+
+          The Fluke 860 Series GMM returns an <acknowledge> reply after
+          each command or query. The value indicates correct or
+          incorrect operation. You always must read this reply to check
+          for the correct operation and to achieve synchronization
+          between your program and the RS232 interface of the
+          Fluke 860 Series GMM.
+
+           <acknowledge>
+               VALUE       MEANING
+
+                 0         No Error
+                 1         Error
+
+
+          When the Fluke 860 Series GMM detects an error during the
+          execution of a command, it sends the corresponding
+          <acknowledge> reply, terminates further execution of the
+          command clears its buffers and will be ready to accept
+          a new command.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                         27
+
+
+
+
+          =============================================================
+                         APPENDIX B          WAVEFORM DATA
+          -------------------------------------------------------------
+
+          The waveform data that is received from the QW (Query
+          Waveform) query, consists of the following data.
+
+          <configuration>,<waveform>
+
+          where,
+             <configuration> = 174 bytes of hexadecimal data used for
+                               setup of Fluke867
+
+
+          where,
+             <waveform> = <trigger data><waveform data><readings>
+
+               <trigger data> = 23 bytes of triggering information
+               <waveform data> = <sample 1><sample 2><sample 3>.....
+                                 <sample 512>
+               <readings> = 275 bytes of hexadecimal reading information
+
+             where each sample is an 8-bit byte, the decimal value of
+             which indicates the vertical position on the display
+             (positions from 0 to 255).  The sample number relates to the
+             horizontal position in the trace (positions from 0 to 511)
+             of which about 240 will fit on the display.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                         28
+
