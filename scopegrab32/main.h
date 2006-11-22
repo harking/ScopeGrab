@@ -108,6 +108,8 @@ extern int fluke_baudrates[];
 #define GFXFORMAT_EPSONESC    2
 #define GFXFORMAT_ADCSAMPLES  3
 #define GFXFORMAT_PNG         4
+#define GFXFORMAT_HPGL        5
+
 
 // ---- wxWidgets application class ----
 

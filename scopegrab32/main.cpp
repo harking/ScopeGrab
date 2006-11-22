@@ -19,7 +19,7 @@
 // ***  ScopeGrab32 - A tool for the Fluke ScopeMeter series            ***
 // ***  (C) 2004 Jan Wagner                                             ***
 // ***                                                                  ***
-// ***  Version: 2.1.0 alpha                                            ***
+// ***  Version: 2.2.0                                                  ***
 // ***                                                                  ***
 // ***  Licence: GNU GPL                                                ***
 // ***                                                                  ***
@@ -47,8 +47,10 @@
 // ***  190 and 190C series. Color screenshots of the 190C are PNG      ***
 // ***  format, which is not yet handled by this program (hey, now you  ***
 // ***  have the source code, add it yourself!:)                        ***
+// ***  There's also support for CombiScope HPGL screenshot data        ***
+// ***  download into a file, but needs an external viewer.             ***
 // ***                                                                  ***
-// ***  The current 2.1.0 alpha version should have working support     ***
+// ***  The current 2.2.0 version       should have working support     ***
 // ***  for ScopeMeters 123,124, 91,92,96 and 97,99.                    ***
 // ***                                                                  ***
 // ***                                                                  ***
@@ -570,8 +572,9 @@ void MyFrame::GUI_State(bool on)
 {
     comboBaud->Enable(on); comboCOM->Enable(on);
     m_menuBar->EnableTop(0,on);
-    btnGetScreenshot->Enable(on); btnSaveScreenshot->Enable(on);
-    btnCopyScreenshot->Enable(on);
+    btnGetScreenshot->Enable(on);
+    btnSaveScreenshot->Enable(on && (COMBISCOPE_PM33_SERIES!=mScopemeterType));
+    btnCopyScreenshot->Enable(on && (COMBISCOPE_PM33_SERIES!=mScopemeterType));
     btnSavePostscript->Enable(on && (SCOPEMETER_190_SERIES==mScopemeterType)); // only 190/190C does postscript
     btnReconnect->Enable(on); btnSendCommand->Enable(on);
     if(comboWaveforms->GetCount()>0 || !on) { 
@@ -727,7 +730,7 @@ void MyFrame::ChangeComPort(bool bNewPortSelected)
         if(true==respOk) {
             response = GetFlukeResponse(250); // <infos> string
         }
-        
+
         wxString infoStr = "";
         if(response.Freq(';')>1) {
             bFlukeDetected = true;
@@ -739,6 +742,7 @@ void MyFrame::ChangeComPort(bool bNewPortSelected)
             // next, try to extract the scopemeter series info
             response = response.MakeUpper();
             response = response.BeforeFirst(';');
+            st_2->SetLabel(wxT("Fluke ScopeMeter:"));
             if(1!=response.Contains("SCOPE") && 1!=response.Contains("FLUKE")) {
                 // no Fluke ScopeMeter
                 mScopemeterType = SCOPEMETER_NONE;
@@ -758,6 +762,7 @@ void MyFrame::ChangeComPort(bool bNewPortSelected)
                // NOTE: CombiScope 33xxB "ID" format is different from Scopemeter series:
                // "FLUKE;PM 3380B;0;SW3394BI V4.0 1996-10-02;UHM V1.0;UFO V2.0;IEEE;EMCR"
                stFlukeID->SetLabel(strScopemeterID.AfterFirst(';').BeforeFirst(';'));
+               st_2->SetLabel(wxT("Fluke CombiScope:"));
                mScopemeterType = COMBISCOPE_PM33_SERIES;
             } else {
                 // unsupported model
@@ -926,6 +931,12 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
             GraphicsFormat = GFXFORMAT_EPSONESC;
             statusBar->SetStatusText("screenshot: requesting screen graphics",1);
             break;
+        case COMBISCOPE_PM33_SERIES:
+            // Query Print, response is "<ack><CR><data....>[1 sec timeout]"
+            command = "QP 1"; // same as in Combiscope CPL Protocol src code example
+            GraphicsFormat = GFXFORMAT_HPGL;
+            statusBar->SetStatusText("screenshot: requesting HPGL data",1);
+            break;
     }
 
     // -- wait for graphics data to arrive
@@ -1019,6 +1030,64 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
         // done receiving postscript image
         if ( true==imageStart ) { bGotScreenshot = true; }
         statusBar->SetStatusText(oldSBstr,0);
+
+    } else if (GFXFORMAT_HPGL==GraphicsFormat ) {
+        //
+        // Receive HPGL printer command data in binary mode
+        //
+        // After the ack code to the Query Print command,
+        // HPGL data will be coming in. The transmission is
+        // complete when waiting for further data times out.
+        //
+        wxString strHPGL = "";
+        
+        response = QueryFluke(command,false,1000,&respOk); // false=>binary mode, <ack> still rx'ed in ASCII mode
+
+        // read data until timeout
+        while ( true==respOk ) {
+
+           imageStart = true;
+           gotImage = true;  // no real way to check right now...
+
+           DoEvents();
+
+           // get more data and append it to currently received
+           response = GetFlukeResponse(2000); // 2s vs the 1s used in CombiScope example code
+           if (response.Length()<=0) { break; }
+
+           strHPGL.Append(response);
+           statusBar->SetStatusText(wxString::Format("%ld bytes", (long)strHPGL.Length()),0);
+
+        }
+
+        // open a Save File dialog and save data to a file
+        if ( true==gotImage && strHPGL.Length()>1 ) {
+
+           // check if a previous saving path is remembered
+           if ( strPrevSavePath.Length()<1 ) { strPrevSavePath = wxGetCwd(); }
+           // open a Save File dialog for *.HGL
+           wxFileDialog* saveDialog = new wxFileDialog (
+              (wxWindow *)this, "Save HGPL image data to file",
+              strPrevSavePath, "", "HPGL (*.hgl)|*.hgl",
+              wxSAVE|wxOVERWRITE_PROMPT
+           );
+           if ( wxID_CANCEL!=saveDialog->ShowModal() ) {
+               wxString filePath = saveDialog->GetPath();
+               saveDialog->Destroy();
+               // try to save the .HGL file
+               wxFile outputFile(filePath,wxFile::write);
+               if ( true==outputFile.IsOpened() ) {
+                 outputFile.Seek(0, wxFromStart);
+                 outputFile.Write(strHPGL, wxConvLibc);
+                 outputFile.Flush();
+                 outputFile.Close();
+               } else {
+                 statusBar->SetStatusText("save HPGL: error, couldn't create file!",1);
+               }
+               // store the path name for the next Save File dialog
+               strPrevSavePath = filePath.BeforeLast('\\');
+           }
+        }
         
     } else if ( GFXFORMAT_EPSONESC==GraphicsFormat ) {
         //
