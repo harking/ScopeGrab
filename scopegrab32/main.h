@@ -100,6 +100,7 @@ extern int fluke_baudrates[];
 #define SCOPEMETER_190_SERIES 190  // 192,196,199
 #define SCOPEMETER_90_SERIES   90  // 91,92,96
 #define SCOPEMETER_97_SERIES   97  // 97,99
+#define COMBISCOPE_PM33_SERIES 33  // 3370B,3380B,3390B,3384B,3394B
 
 // format of the raw data the Scopemeter series returns (screenshot, waveforms)
 #define GFXFORMAT_NONE        0

@@ -754,6 +754,11 @@ void MyFrame::ChangeComPort(bool bNewPortSelected)
             } else if(1==(response.Contains(" 123") || response.Contains(" 124")
                     || response.Contains(" 105"))) {
                 mScopemeterType = SCOPEMETER_120_SERIES;
+            } else if(1==(strScopemeterID.MakeUpper().Contains("PM 33"))) {
+               // NOTE: CombiScope 33xxB "ID" format is different from Scopemeter series:
+               // "FLUKE;PM 3380B;0;SW3394BI V4.0 1996-10-02;UHM V1.0;UFO V2.0;IEEE;EMCR"
+               stFlukeID->SetLabel(strScopemeterID.AfterFirst(';').BeforeFirst(';'));
+               mScopemeterType = COMBISCOPE_PM33_SERIES;
             } else {
                 // unsupported model
                 mScopemeterType = SCOPEMETER_NONE;
