@@ -22,7 +22,6 @@
 #ifdef __WIN32__
    #include <windows.h>
 #else
-   // TODO: add linux header includes
    #include "linux_typedefs.h"
    #include <unistd.h>   
    #include "statpict.h"
@@ -119,6 +118,7 @@ extern int fluke_baudrates[];
 #define SCOPEMETER_190_SERIES 190  // 192,196,199
 #define SCOPEMETER_90_SERIES   90  // 91,92,96
 #define SCOPEMETER_97_SERIES   97  // 97,99
+#define COMBISCOPE_PM33_SERIES 33  // 3370B,3380B,3390B,3384B,3394B
 
 // format of the raw data the Scopemeter series returns (screenshot, waveforms)
 #define GFXFORMAT_NONE        0
@@ -126,6 +126,7 @@ extern int fluke_baudrates[];
 #define GFXFORMAT_EPSONESC    2
 #define GFXFORMAT_ADCSAMPLES  3
 #define GFXFORMAT_PNG         4
+#define GFXFORMAT_HPGL        5
 
 // Linux and Windows GUI differences
 // e.g. combo box widths, fonts
@@ -144,6 +145,15 @@ extern int fluke_baudrates[];
    #define GENERAL_FONT "Sans Serif"
    #define GENERAL_FONT_SIZE 9
 #endif 
+
+
+// ---- macros ----
+
+#ifdef __WIN32__
+  #define USLEEP(x)   SleepEx(x/100L,TRUE);
+#else
+  #define USLEEP(x)   usleep(x)
+#endif
 
 // ---- wxWidgets application class ----
 
@@ -204,8 +214,9 @@ private:
    void        OnMenuGuide(SG32_MENU_EVT_TYPE event);
    // serial port selection
    void        evtChangeComPort(wxCommandEvent& event);
+   void        evtChangeBaudrate(wxCommandEvent& event);
    void        evtReconnect(wxCommandEvent& event);
-   void        ChangeComPort();
+   void        ChangeComPort(bool bNewPortSelected);
    // button clicks
    void        evtSendCommand(wxCommandEvent& event);
    void        evtGetScreenshot(wxCommandEvent& event);

@@ -2,14 +2,33 @@
  How to compile ScopeGrab32
 ---------------------------------
 
+As always, meeting the software requirements here is
+the easy part. While theoretically everything should
+compile fine already on the first try, more probably
+you are going to get some strange compiler errors...
+:-) Then you should check in Dev-C++ Project Options
+that all include and library paths are correct. In
+Linux you'd have to edit the 'makefile'.
+
+*** Windows ***
+
+Install Dev-C++ 4.9.92 beta
+  http://www.bloodshed.net/dev/devcpp.html
+and get wxWindows (wxWidgets) 2.4.2 as a DevPak
+for Dev-C++ from
+  http://michel.weinachter.free.fr/
+or www.google.com "wxwindows 2.4.2 devpak"
+
+*** Linux ***
+
 This source should compile fine if you have installed
 the usual GNU compiler tools gcc, g++ and make.
 
 As ScopeGrab32 uses wxWidgets, you'll additionally need
-to download and compile the wxWidgets wxGTK source code. 
+to download and compile the wxWidgets wxGTK source code.
 You can download it at:
   http://www.wxwidgets.org/
-If you want to redistribute a self-made binary of 
+If you want to redistribute a self-made binary of
 ScopeGrab32, then you should compile wxWidgets with
   ./configure --disable-shared
   make
@@ -21,11 +40,11 @@ The wxX11 and wxUniversal are simply way too buggy and
 limited in the GUI department (e.g. no wxMessageBox...)
 
 To compile ScopeGrab32, simply do
-  make 
-in the source code folder. You can copy ScopeGrab32.bin 
+  make
+in the source code folder. You can copy ScopeGrab32.bin
 and the ./help folder to where ever you like, e.g. /usr/bin
 
-I've tested that ScopeGrab32 works fine in SuSE 9.3 
+I've tested that ScopeGrab32 works fine in SuSE 9.3
 kernel 2.6 and GTK2+. I can not make any guarantees for
 other distros, Mac OS X, Unix, or other systems. And
 as usual with GNU GPL, no guarantees for anything.

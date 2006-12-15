@@ -5,13 +5,13 @@
 #define SCOPEGRAB32_PRIVATE_H
 
 /* VERSION DEFINITIONS */
-#define VER_STRING	"2.2.5.1"
+#define VER_STRING	"2.2.6.2"
 #define VER_MAJOR	2
 #define VER_MINOR	2
-#define VER_RELEASE	5
-#define VER_BUILD	1
+#define VER_RELEASE	6
+#define VER_BUILD	2
 #define COMPANY_NAME	""
-#define FILE_VERSION	"2.2.5"
+#define FILE_VERSION	"2.2.6"
 #define FILE_DESCRIPTION	"Serial comm tool for the Fluke ScopeMeter series"
 #define INTERNAL_NAME	""
 #define LEGAL_COPYRIGHT	"2005 Jan Wagner"

@@ -5,10 +5,10 @@ UnitCount=7
 Type=0
 Ver=1
 ObjFiles=
-Includes=
+Includes=C:\Dev-Cpp\include
 Libs=
 PrivateResource=ScopeGrab32_private.rc
-ResourceIncludes=
+ResourceIncludes=C:\Dev-Cpp\include
 MakeIncludes=
 Compiler=
 CppCompiler=-DWINVER=0x0400 _@@_-D__WIN95__ _@@_-D__GNUWIN32__ _@@_-D__WIN32__ _@@_-D__WXMSW__ _@@_-D__WINDOWS__ _@@_-DHAVE_W32API_H  _@@_-Wall _@@_-fno-pcc-struct-return _@@_-fstrict-aliasing _@@_-g3_@@_-O0_@@_
@@ -25,7 +25,7 @@ CommandLine=
 IncludeVersionInfo=1
 SupportXPThemes=0
 CompilerSet=0
-CompilerSettings=0000000000000001000000
+CompilerSettings=00000000000000010000b0
 UseCustomMakefile=0
 CustomMakefile=
 
@@ -52,12 +52,12 @@ BuildCmd=
 [VersionInfo]
 Major=2
 Minor=2
-Release=5
-Build=1
+Release=6
+Build=2
 LanguageID=1033
 CharsetID=1252
 CompanyName=
-FileVersion=2.2.5
+FileVersion=2.2.6
 FileDescription=Serial comm tool for the Fluke ScopeMeter series
 InternalName=
 LegalCopyright=2005 Jan Wagner
