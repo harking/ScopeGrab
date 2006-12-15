@@ -106,9 +106,9 @@ bool CSerial::openPort(
    BYTE parity, BYTE handshaking, const char* portStr ) {
 
    int i = 0;
-   
+
    m_PreviousError = 0;
-      
+
    // check for parameters for valid range
    if ( NULL==portStr && (portnum>64) ) return false;
    if ( baudrate<1200 || baudrate>115200 ) return false;
@@ -134,8 +134,8 @@ bool CSerial::openPort(
       m_PreviousError = errno;
       perror(portStr);
       return false;
-   } 
-   
+   }
+
    fcntl(m_portHdl, F_SETFL, 0); // use a blocking read()
 
    // port was opened, get properties block
@@ -151,7 +151,7 @@ bool CSerial::openPort(
    m_serialopt.c_cflag &= ~CSTOPB;
    m_serialopt.c_cflag &= ~CSIZE;
    m_serialopt.c_cflag |= CS8;
-   
+
    // disable hardware flow control / handshaking
    #ifdef CNEW_RTSCTS
    m_serialopt.c_cflag &= ~CNEW_RTSCTS;
@@ -160,7 +160,7 @@ bool CSerial::openPort(
       m_serialopt.c_cflag &= ~CRTSCTS;
       #endif
    #endif
-   
+
    // configure for raw binary data (i.e. disable ascii/echo mode)
    m_serialopt.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
 
@@ -178,7 +178,7 @@ bool CSerial::openPort(
    m_serialopt.c_cc[VMIN] = 1;   // wait for 1 byte at a time
 //   m_serialopt.c_cc[VTIME] = 0;  // blocking wait (no timeout)
    m_serialopt.c_cc[VTIME] = 5; // timeout all 0,5s
-  
+
    // set the baudrate (convert to Bxxxx constant first)
    baudrate = baudToValue(baudrate);
    cfsetispeed(&m_serialopt, baudrate);
@@ -195,8 +195,8 @@ bool CSerial::openPort(
       perror("openPort() tcsetattr");
       close(m_portHdl);
       return false;
-   }   
-   
+   }
+
    // attempt to start the receiver thread
    this->m_RxThread_Running = true;
    this->m_RxThread_Shutdown = false;
@@ -261,7 +261,7 @@ bool CSerial::closePort() {
 
    // time out all pending operations
    // ...
-   
+
    // stop the receiver thread
    if ( true==this->m_RxThread_Running ) {
 
@@ -271,8 +271,8 @@ bool CSerial::closePort() {
       tcgetattr(m_portHdl, &m_serialopt);
       m_serialopt.c_cc[VMIN] = 1;   // wait for 1 byte
       m_serialopt.c_cc[VTIME] = 1;  // wait 1x0,1s
-      tcsetattr(m_portHdl, TCSANOW, &m_serialopt);      
-      
+      tcsetattr(m_portHdl, TCSANOW, &m_serialopt);
+
       // give the thread a while to terminate by itself (1s=20*50ms)
       for ( int k=0; (true==this->m_RxThread_Shutdown) && k<20; ++k ) {
          usleep(50000);
@@ -294,7 +294,7 @@ bool CSerial::closePort() {
          return false;
       }
    }
-   
+
    m_portHdl = INVALID_HANDLE_VALUE;
    return true;
 }
@@ -320,30 +320,30 @@ void CSerial::ReceiverThread(void* hostClass) {
 
    // get host class
    if ( NULL==hostClass ) { pthread_exit(0); }
-   CSerial* host = (CSerial*)hostClass;   
-   
+   CSerial* host = (CSerial*)hostClass;
+
    // thread started, set the info flags
    host->m_RxThread_Running = true;
    host->m_RxThread_Shutdown = false;
-   
+
    // allow asynchronous (immediate) cancelling of this thread
    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
-      
+
    // receive chars, until thread is told to terminate
    while ( false==host->m_RxThread_Shutdown ) {
-   
+
       // get more bytes (blocking call)
       bytesread = read(host->m_portHdl, rxbuf, MAX_IN_BUFFER);
-   
+
       if (bytesread>0) {
          // forward data to the client application
          if (host->frmMain != NULL) {
             host->frmMain->OnCommEvent((const BYTE*)rxbuf, (const DWORD)bytesread);
          }
       }
-      
+
    }
-   
+
    // Exited the receiver loop because m_RxThread_Shutdown was set to true
    // Set it back to false to indicate that the thread has closed now.
    host->m_RxThread_Shutdown = false;
@@ -369,7 +369,7 @@ bool CSerial::transmitData(const BYTE* databuf, const DWORD bytecount) {
    unsigned int written = 0;
 
    m_PreviousError = 0;
-  
+
    // can transmit only on opened port
    if ( false==isOpen() ) return false;
 
@@ -385,7 +385,7 @@ bool CSerial::transmitData(const BYTE* databuf, const DWORD bytecount) {
       }
       return false;
    }
-   
+
    return true;
 }
 
@@ -414,11 +414,11 @@ bool CSerial::setDTR(bool switchOn) {
 
    int result;
    int status;
-   
+
    if ( INVALID_HANDLE_VALUE==m_portHdl ) return false;
 
    if ( -1==ioctl(m_portHdl, TIOCMGET, &status) ) return false;
-   
+
    if ( true==switchOn ) {
       status |= TIOCM_DTR;
    } else {
@@ -457,11 +457,11 @@ bool CSerial::setRTS(bool switchOn) {
 
    int result;
    int status;
-   
+
    if ( INVALID_HANDLE_VALUE==m_portHdl ) return false;
 
    if ( -1==ioctl(m_portHdl, TIOCMGET, &status) ) return false;
-   
+
    if ( true==switchOn ) {
       status |= TIOCM_RTS;
    } else {
@@ -473,7 +473,7 @@ bool CSerial::setRTS(bool switchOn) {
       m_PreviousError = errno;
       return true;
    }
-   
+
    m_RTSon = switchOn;
    return true;
 }
@@ -488,7 +488,7 @@ bool CSerial::setRTS(bool switchOn) {
 // *  Returns: true if the baud rate was successfully changed
 
 bool CSerial::setBaudrate(DWORD baudrate) {
-   
+
    // can change only on opened port
    if ( INVALID_HANDLE_VALUE==m_portHdl ) return false;
 
@@ -500,22 +500,22 @@ bool CSerial::setBaudrate(DWORD baudrate) {
       m_PreviousError = errno;
       perror("setBaudrate tcgetattr()");
       return false;
-   }  
-   
+   }
+
    // convert baud to Bxxx value, then write the new baud rate
    baudrate = baudToValue((unsigned int)baudrate);
    if ( -1==cfsetispeed(&m_serialopt, baudrate) ||
         -1==cfsetospeed(&m_serialopt, baudrate) ) {
       m_PreviousError = errno;
       perror("setBaudrate cfsetiospeed()");
-      return false;      
+      return false;
    }
-   
+
    // apply
    if ( -1==tcsetattr(m_portHdl, TCSANOW, &m_serialopt) ) { // TCSAFLUSH
       m_PreviousError = errno;
       perror("setBaudrate tcsetattr()");
-      return false;      
+      return false;
    }
 
    return true;
@@ -529,9 +529,9 @@ bool CSerial::setBaudrate(DWORD baudrate) {
 // *  Returns: 0 on error, or the actual baud rate
 
 DWORD CSerial::getBaudrate() {
-   
+
    int bvalue = 0;
-   
+
    // can read only on opened port
    if ( false==isOpen() ) return 0;
 
@@ -540,7 +540,7 @@ DWORD CSerial::getBaudrate() {
       m_PreviousError = errno;
       perror("getBaudrate()");
       return false;
-   }  
+   }
 
    // return the baudrate
    bvalue = (int)cfgetospeed(&m_serialopt);
@@ -559,28 +559,8 @@ DWORD CSerial::getBaudrate() {
 // *  Returns: true if the databits nr was successfully changed
 
 bool CSerial::setDatabits(BYTE databits) {
-   /*
-   // can change only on opened port
-   if ( false==isOpen() ) return false;
-
-   // databit nr is valid/supported?
-   if ( databits<5 || databits>8 ) return false;
-
-   // read the Device Control Block with the current settings
-   DCB commDCB;
-   commDCB.DCBlength = sizeof(DCB);
-   if ( !GetCommState(m_portHdl, &commDCB) ) {
-      m_PreviousError = errno;
-      return false;
-   }
-
-   // update to new databit nr
-   commDCB.ByteSize = databits;
-   if ( !SetCommState(m_portHdl, &commDCB) ) {
-      m_PreviousError = errno;
-      return false;
-   }
-   */
+   // LINUX IMPLEMENTATION STILL MISSING
+   // but not really required by ScopeGrab32
    return true;
 }
 
@@ -596,29 +576,8 @@ bool CSerial::setDatabits(BYTE databits) {
 // *  Returns: true if the stopbits nr was successfully changed
 
 bool CSerial::setStopbits(BYTE stopbits) {
-   /*
-   // can change only on opened port
-   if ( false==isOpen() ) return false;
-
-   // stopbits nr is valid/supported?
-   if ( ONESTOPBIT!=stopbits && ONE5STOPBITS!=stopbits
-         && TWOSTOPBITS!=stopbits ) return false;
-
-   // read the Device Control Block with the current settings
-   DCB commDCB;
-   commDCB.DCBlength = sizeof(DCB);
-   if ( !GetCommState(m_portHdl, &commDCB) ) {
-      m_PreviousError = errno;
-      return false;
-   }
-
-   // update to new databit nr
-   commDCB.StopBits = stopbits;
-   if ( !SetCommState(m_portHdl, &commDCB) ) {
-      m_PreviousError = errno;
-      return false;
-   }
-   */
+   // LINUX IMPLEMENTATION STILL MISSING
+   // but not really required by ScopeGrab32
    return true;
 }
 
@@ -632,7 +591,7 @@ bool CSerial::setStopbits(BYTE stopbits) {
 DWORD CSerial::getModembits() {
 
    int status;
-   
+
    // can read only on opened port
    if ( false==isOpen() ) return 0;
 
@@ -653,20 +612,13 @@ DWORD CSerial::getModembits() {
 // *  !! ignored
 
 void CSerial::clearCommErrors() {
-   
+
    // can check only if port is open
    if ( false==isOpen() ) return;
-   /*
-   // read the serial port event mask
-   DWORD commEvt = 0;
-   if ( !GetCommMask(m_portHdl, &commEvt) ) return;
 
-   // if an error event is indicated, clear the errors
-   DWORD commErr = 0;
-   if ( commEvt & EV_ERR ) {
-      ClearCommError(m_portHdl, &commErr, NULL);
-   }
-   */
+   // LINUX IMPLEMENTATION STILL MISSING
+   // but not really required by ScopeGrab32
+
    return;
 }
 
