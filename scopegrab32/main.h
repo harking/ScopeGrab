@@ -1,3 +1,19 @@
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ */
+
 #ifndef __VwX_MyFrame_H__
 #define __VwX_MyFrame_H__
 
@@ -6,8 +22,9 @@
 #ifdef __WIN32__
    #include <windows.h>
 #else
-   // TODO: add linux header includes
-   #include "linuxport_typedefs.h"
+   #include "linux_typedefs.h"
+   #include <unistd.h>   
+   #include "statpict.h"
 #endif
 
 // ---- wxWidgets includes ----
@@ -40,6 +57,7 @@
 #include <wx/datetime.h>
 #include <wx/config.h>
 #include <wx/html/helpctrl.h>
+#include <wx/version.h>
 #ifdef __WIN32__
 #include <wx/msw/helpchm.h>
 #endif
@@ -110,6 +128,32 @@ extern int fluke_baudrates[];
 #define GFXFORMAT_PNG         4
 #define GFXFORMAT_HPGL        5
 
+// Linux and Windows GUI differences
+// e.g. combo box widths, fonts
+#ifdef __WIN32__
+   #define CB_COM_WIDTH 65
+   #define CB_BAUD_WIDTH 85
+   #define MNU_OFFSET 0
+   #define CONSOLE_FONT "Arial"
+   #define GENERAL_FONT "Arial"
+   #define GENERAL_FONT_SIZE 12
+#else
+   #define CB_COM_WIDTH 130
+   #define CB_BAUD_WIDTH 85
+   #define MNU_OFFSET 0 // 20 for wxX11, 0 for wxGTK
+   #define CONSOLE_FONT "Monospace"
+   #define GENERAL_FONT "Sans Serif"
+   #define GENERAL_FONT_SIZE 9
+#endif 
+
+
+// ---- macros ----
+
+#ifdef __WIN32__
+  #define USLEEP(x)   SleepEx(x/100L,TRUE);
+#else
+  #define USLEEP(x)   usleep(x)
+#endif
 
 // ---- wxWidgets application class ----
 
@@ -158,9 +202,16 @@ private:
 
    // -- event handlers
    // menu
-   void        OnMenuExit(wxMenuEvent& event);
-   void        OnMenuAbout(wxMenuEvent& event);
-   void        OnMenuGuide(wxMenuEvent& event);
+   #if wxCHECK_VERSION(2,6,0)
+      // wxWidgets 2.6.2 and later
+      #define SG32_MENU_EVT_TYPE wxCommandEvent&
+   #else
+      // wxWidgets 2.4.2
+      #define SG32_MENU_EVT_TYPE wxMenuEvent&
+   #endif
+   void        OnMenuExit(SG32_MENU_EVT_TYPE event);
+   void        OnMenuAbout(SG32_MENU_EVT_TYPE event);
+   void        OnMenuGuide(SG32_MENU_EVT_TYPE event);
    // serial port selection
    void        evtChangeComPort(wxCommandEvent& event);
    void        evtChangeBaudrate(wxCommandEvent& event);
@@ -215,7 +266,12 @@ private:
    wxButton       *btnGetWaveform;
    wxTextCtrl     *txtWavestring;
 
+   #ifdef __WIN32__
    wxStaticBitmap *sbmpScreenshot;    // image painted to the display
+   #else
+   wxStaticPicture *sbmpScreenshot;
+   #endif
+   
    wxImage        *imgScreenshot;     // actual image content
    bool           bGotScreenshot;     // TRUE when image contains a screenshot
    volatile bool  bEscKey;            // TRUE after user presses 'ESC'

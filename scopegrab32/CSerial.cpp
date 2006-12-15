@@ -56,7 +56,7 @@ CSerial::~CSerial() {
 bool CSerial::openPort(
    BYTE portnum, DWORD baudrate,
    BYTE databits, BYTE stopbits,
-   BYTE parity, BYTE handshaking ) {
+   BYTE parity, BYTE handshaking, const char* portStr ) {
 
    // check for parameters for valid range
    if ( portnum<1 || portnum>64 ) return false;
@@ -64,6 +64,7 @@ bool CSerial::openPort(
    if ( databits<5 || databits>8 ) return false;
    if ( ONESTOPBIT!=stopbits && ONE5STOPBITS!=stopbits
          && TWOSTOPBITS!=stopbits ) return false;
+   // portStr ignored in Windows, for now
 
    // if the port is already open, close it first,
    // then re-open with the new settings
@@ -356,7 +357,7 @@ DWORD ReceiverFunc(LPVOID hostClass) {
                   ptrHost->m_portHdl,
                   &(ptrHost->m_overlapRx),
                   &dword1,
-                  TRUE
+                  TRUE // blocking call
                );
 
          if(!ret) {
@@ -365,10 +366,13 @@ DWORD ReceiverFunc(LPVOID hostClass) {
             ResetEvent(ptrHost->m_overlapRx.hEvent);
             continue;
          } else {
-            // wait went ok, get current state, contineu
-            // with reading the bytes farther below
-            GetCommMask ( ptrHost->m_portHdl, &rxevent );
+            // wait went ok, proceed to read the bytes farther below
          }
+         
+      } else if (!ret) {
+         // other WaitCommEvent failure
+         ClearCommError(ptrHost->m_portHdl, &commerr, NULL);
+         continue;
       }
 
       // operation completed, check what event this was
