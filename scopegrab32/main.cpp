@@ -84,11 +84,8 @@
 // ***                                                                  ***
 // ***                                                                  ***
 // ***  COMPILING                                                       ***
-// ***  The program compiles only for Windows systems, as it calls      ***
-// ***  the Win32 API serial port functions. Porting to linux should    ***
-// ***  work, if you rewrite the CSerial class.                         ***
 // ***                                                                  ***
-// ***  This source was developed and compiled using:                   ***
+// ***  This source was developed and compiled in Windows XP using:     ***
 // ***                                                                  ***
 // ***   a) Dev-C++ 5.0 beta 9                                          ***
 // **       http://www.bloodshed.net/dev/devcpp.html                    ***
