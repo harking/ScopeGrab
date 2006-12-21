@@ -644,6 +644,7 @@ void MyFrame::ResetModeldependendGUI()
     switch(mScopemeterType) {
         case SCOPEMETER_190_SERIES:
         case SCOPEMETER_120_SERIES:
+        // case POWERQUALITY_43B: (need to check specs..)
             for ( int i=0; i<FLUKE190_WF_QUERY_NUM; ++i ) {
                 comboWaveforms->Append(fluke190wfNames[i], &fluke190wfQueries[i]);
             }
@@ -675,9 +676,14 @@ void MyFrame::GUI_State(bool on)
     comboBaud->Enable(on); comboCOM->Enable(on);
     m_menuBar->EnableTop(0,on);
     btnGetScreenshot->Enable(on);
-    btnSaveScreenshot->Enable(on && (COMBISCOPE_PM33_SERIES!=mScopemeterType));
+
+    // allow enabling these buttons, even if no (full) screenshot is there:
     btnCopyScreenshot->Enable(on && (COMBISCOPE_PM33_SERIES!=mScopemeterType));
-    btnSavePostscript->Enable(on && (SCOPEMETER_190_SERIES==mScopemeterType)); // only 190/190C does postscript
+    btnSaveScreenshot->Enable(on && (COMBISCOPE_PM33_SERIES!=mScopemeterType));
+    btnSavePostscript->Enable(on && (SCOPEMETER_190_SERIES==mScopemeterType
+                                     || POWERQUALITY_43B==mScopemeterType)
+                                 && (strPostscript.Length()>=128) );
+
     btnReconnect->Enable(on); btnSendCommand->Enable(on);
     if(comboWaveforms->GetCount()>0 || !on) {
         comboWaveforms->Enable(on);
@@ -887,6 +893,8 @@ void MyFrame::ChangeComPort(bool bNewPortSelected)
             } else if(1==(response.Contains(" 123") || response.Contains(" 124")
                     || response.Contains(" 105"))) {
                 mScopemeterType = SCOPEMETER_120_SERIES;
+            } else if(1==response.Contains("FLUKE 43B")) {
+                mScopemeterType = POWERQUALITY_43B;
             } else if(1==(strScopemeterID.MakeUpper().Contains("PM 33"))) {
                // NOTE: CombiScope 33xxB "ID" format is different from Scopemeter series:
                // "FLUKE;PM 3380B;0;SW3394BI V4.0 1996-10-02;UHM V1.0;UFO V2.0;IEEE;EMCR"
@@ -922,6 +930,7 @@ void MyFrame::ChangeComPort(bool bNewPortSelected)
             switch(mScopemeterType) {
                 case SCOPEMETER_190_SERIES:
                 case SCOPEMETER_120_SERIES:
+                case POWERQUALITY_43B:
                     command = wxString::Format("PC %d", baud);
                     break;
                 case SCOPEMETER_90_SERIES:
@@ -1050,6 +1059,7 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
     switch(mScopemeterType) {
         case SCOPEMETER_190_SERIES:
         case SCOPEMETER_120_SERIES:
+        case POWERQUALITY_43B:
             // Query Print screen 0 and postscript (3) format
             command = "QP 0,3";
             GraphicsFormat = GFXFORMAT_POSTSCRIPT;
@@ -1613,6 +1623,7 @@ void MyFrame::evtGetWaveform(wxCommandEvent& event)
         switch(mScopemeterType) {
         case SCOPEMETER_190_SERIES:
         case SCOPEMETER_120_SERIES:
+        case POWERQUALITY_43B:
             // Response format (at least for the 190 series):
             // <trace_admin>,<trace_samples>
             //   where
@@ -1803,7 +1814,8 @@ void MyFrame::OnMenuAbout(SG32_MENU_EVT_TYPE event)
         "\r\n\rAn open source tool for communicating\r\n"
         "with a Fluke Scopemeter and also do a\r\nscreen capture.\r\n\r\n"
         "Supported models: 190 and 190C series\r\n\r\n"
-        "Beta support: 123,124,91,92,96 and 97,99\r\n\r\n"
+        "Beta support: SM123,124,91,92,96 and SM97,99\r\n"
+        "and PM33xx, Fluke 43B\r\n"
         "(C) 2005 Jan Wagner\r\nRequests and bugs to: jan.wagner@iki.fi\r\n\r\n"
         "Thanks go to: Jens F., Ethan W., Stuart P., \r\n"
         "Wayne L., Kristijan B., Leif K.",
