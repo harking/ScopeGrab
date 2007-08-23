@@ -1094,10 +1094,15 @@ void MyFrame::evtGetScreenshot(wxCommandEvent& event)
         oldSBstr = statusBar->GetStatusText(0);
         this->strPostscript = "";
         response = QueryFluke(command,true,1000,&respOk); // first just the <ack>
+
+        if ( mScopemeterType == POWERQUALITY_43B ) { // work around 43B quirk
+            mySerial->transmitData((const BYTE*)" \r", 2);
+        }
+
         while ( (response.Length()>0) && (true==respOk) ) {
 
             // get next line
-            response = GetFlukeResponse(1000); // <printer or image data><cr>
+            response = GetFlukeResponse(5000); // <printer or image data><cr>
             if(response.Length()<=0) break;
 
             // interrupt if user wants
